@@ -43,7 +43,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   forms = {
  *     "add-payment-method" = "Drupal\commerce_authnet\PluginForm\AuthorizeNet\PaymentMethodAddForm",
  *   },
- *   payment_method_types = {"credit_card"},
+ *   payment_method_types = {"credit_card", "authnet_echeck"},
  *   credit_card_types = {
  *     "amex", "dinersclub", "discover", "jcb", "mastercard", "visa"
  *   },
@@ -220,19 +220,10 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
     $this->assertPaymentState($payment, ['new']);
     $payment_method = $payment->getPaymentMethod();
     $this->assertPaymentMethod($payment_method);
+    $payment_method_type = $payment_method->getType()->getPluginId();
 
     $order = $payment->getOrder();
     $owner = $payment_method->getOwner();
-    $customer_profile_id = $this->getRemoteCustomerId($owner);
-
-    // Anonymous users get the customer profile and payment profile ids from
-    // the payment method remote id.
-    if (!$customer_profile_id) {
-      list($customer_profile_id, $payment_profile_id) = explode('|', $payment_method->getRemoteId());
-    }
-    else {
-      $payment_profile_id = $payment_method->getRemoteId();
-    }
 
     // Transaction request
     $transaction_request = new TransactionRequest([
@@ -240,11 +231,33 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
       'amount' => $payment->getAmount()->getNumber(),
     ]);
 
-    // @todo update SDK to support data type like this.
-    // Initializing the profile to charge and adding it to the transaction.
-    $profile_to_charge = new Profile(['customerProfileId' => $customer_profile_id]);
-    $profile_to_charge->addData('paymentProfile', ['paymentProfileId' => $payment_profile_id]);
-    $transaction_request->addData('profile', $profile_to_charge->toArray());
+    if ($payment_method_type == 'credit_card') {
+      // @todo update SDK to support data type like this.
+      // Initializing the profile to charge and adding it to the transaction.
+      $customer_profile_id = $this->getRemoteCustomerId($owner);
+
+      // Anonymous users get the customer profile and payment profile ids from
+      // the payment method remote id.
+      if (!$customer_profile_id) {
+        list($customer_profile_id, $payment_profile_id) = explode('|', $payment_method->getRemoteId());
+      }
+      else {
+        $payment_profile_id = $payment_method->getRemoteId();
+      }
+      $profile_to_charge = new Profile(['customerProfileId' => $customer_profile_id]);
+      $profile_to_charge->addData('paymentProfile', ['paymentProfileId' => $payment_profile_id]);
+      $transaction_request->addData('profile', $profile_to_charge->toArray());
+    }
+    elseif ($payment_method_type == 'authnet_echeck') {
+      list($data_descriptor, $data_value) = explode('|', $payment_method->getRemoteId());
+      $payment_data = [
+        'opaqueData' => [
+          'dataDescriptor' => $data_descriptor,
+          'dataValue' => $data_value,
+        ],
+      ];
+      $transaction_request->addData('payment', $payment_data);
+    }
 
     // Adding order information to the transaction
     $transaction_request->addOrder(new OrderDataType([
@@ -382,6 +395,7 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
    * @todo Needs kernel test
    */
   public function createPaymentMethod(PaymentMethodInterface $payment_method, array $payment_details) {
+    $payment_method_type = $payment_method->getType()->getPluginId();
     $required_keys = [
       'data_descriptor', 'data_value'
     ];
@@ -390,20 +404,29 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
         throw new \InvalidArgumentException(sprintf('$payment_details must contain the %s key.', $required_key));
       }
     }
-
     $remote_payment_method = $this->doCreatePaymentMethod($payment_method, $payment_details);
 
-    // @todo Make payment methods reusable. Currently they represent 15min nonce.
-    // @see https://community.developer.authorize.net/t5/Integration-and-Testing/Question-about-tokens-transaction-keys/td-p/56689
-    // "You are correct that the Accept.js payment nonce must be used within 15 minutes before it expires."
-    // Meet specific requirements for reusable, permanent methods.
-    $payment_method->setReusable(FALSE);
-    $payment_method->card_type = $this->mapCreditCardType($remote_payment_method['card_type']);
-    $payment_method->card_number = $remote_payment_method['last4'];
-    $payment_method->card_exp_month = $remote_payment_method['expiration_month'];
-    $payment_method->card_exp_year = $remote_payment_method['expiration_year'];
-    $payment_method->setRemoteId($remote_payment_method['token']);
+    switch ($payment_method_type) {
+      case 'credit_card':
+        // @todo Make payment methods reusable. Currently they represent 15min
+        // nonce.
+        // @see https://community.developer.authorize.net/t5/Integration-and-Testing/Question-about-tokens-transaction-keys/td-p/56689
+        // "You are correct that the Accept.js payment nonce must be used within
+        // 15 minutes before it expires."
+        // Meet specific requirements for reusable, permanent methods.
+        $payment_method->setReusable(FALSE);
+        $payment_method->card_type = $this->mapCreditCardType($remote_payment_method['card_type']);
+        $payment_method->card_number = $remote_payment_method['last4'];
+        $payment_method->card_exp_month = $remote_payment_method['expiration_month'];
+        $payment_method->card_exp_year = $remote_payment_method['expiration_year'];
+        $payment_method->setRemoteId($remote_payment_method['remote_id']);
+        break;
 
+      case 'authnet_echeck':
+        $payment_method->setReusable(FALSE);
+        $payment_method->setRemoteId($remote_payment_method['remote_id']);
+        break;
+    }
     // OpaqueData expire after 15min. We reduce that time by 5s to account for the
     // time it took to do the server request after the JS tokenization.
     $expires = $this->time->getRequestTime() + (15 * 60) - 5;
@@ -432,76 +455,18 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
    *   - expiration_year: The expiration year.
    */
   protected function doCreatePaymentMethod(PaymentMethodInterface $payment_method, array $payment_details) {
+    $payment_method_type = $payment_method->getType()->getPluginId();
     $owner = $payment_method->getOwner();
-    $customer_profile_id = NULL;
-    $customer_data = [];
-    if ($owner && !$owner->isAnonymous()) {
-      $customer_profile_id = $this->getRemoteCustomerId($owner);
-      $customer_data['email'] = $owner->getEmail();
-    }
-
-    if ($customer_profile_id) {
-      $payment_profile = $this->buildCustomerPaymentProfile($payment_method, $payment_details, $customer_profile_id);
-      $request = new CreateCustomerPaymentProfileRequest($this->authnetConfiguration, $this->httpClient);
-      $request->setCustomerProfileId($customer_profile_id);
-      $request->setPaymentProfile($payment_profile);
-      $response = $request->execute();
-
-      if ($response->getResultCode() != 'Ok') {
-        $this->logResponse($response);
-        $error = $response->getMessages()[0];
-        switch ($error->getCode()) {
-          case 'E00039':
-            if (!isset($response->customerPaymentProfileId)) {
-              throw new InvalidResponseException('Duplicate payment profile ID, however could not get existing ID.');
-            }
-            break;
-
-          case 'E00040':
-            // The customer record ID is invalid, remove it.
-            // @note this should only happen in development scenarios.
-            $this->setRemoteCustomerId($owner, NULL);
-            $owner->save();
-            throw new InvalidResponseException('The customer record could not be found');
-
-          default:
-            throw new InvalidResponseException($error->getText());
+    switch ($payment_method_type) {
+      case 'credit_card':
+        $customer_profile_id = NULL;
+        $customer_data = [];
+        if ($owner && !$owner->isAnonymous()) {
+          $customer_profile_id = $this->getRemoteCustomerId($owner);
+          $customer_data['email'] = $owner->getEmail();
         }
-      }
 
-      $payment_profile_id = $response->customerPaymentProfileId;
-    }
-    else {
-      $request = new CreateCustomerProfileRequest($this->authnetConfiguration, $this->httpClient);
-
-      if ($owner->isAuthenticated()) {
-        $profile = new Profile([
-          // @todo how to allow altering.
-          'merchantCustomerId' => $owner->id(),
-          'email' => $owner->getEmail(),
-        ]);
-      }
-      else {
-        $profile = new Profile([
-          // @todo how to allow altering.
-          'merchantCustomerId' => $owner->id() . '_' . $this->time->getRequestTime(),
-          'email' => $payment_details['customer_email'],
-        ]);
-      }
-      $profile->addPaymentProfile($this->buildCustomerPaymentProfile($payment_method, $payment_details));
-      $request->setProfile($profile);
-      $response = $request->execute();
-
-      if ($response->getResultCode() == 'Ok') {
-        $payment_profile_id = $response->customerPaymentProfileIdList->numericString;
-        $customer_profile_id = $response->customerProfileId;
-      }
-      else {
-        // Handle duplicate.
-        if ($response->getMessages()[0]->getCode() == 'E00039') {
-          $result = array_filter(explode(' ', $response->getMessages()[0]->getText()), 'is_numeric');
-          $customer_profile_id = reset($result);
-
+        if ($customer_profile_id) {
           $payment_profile = $this->buildCustomerPaymentProfile($payment_method, $payment_details, $customer_profile_id);
           $request = new CreateCustomerPaymentProfileRequest($this->authnetConfiguration, $this->httpClient);
           $request->setCustomerProfileId($customer_profile_id);
@@ -510,54 +475,117 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
 
           if ($response->getResultCode() != 'Ok') {
             $this->logResponse($response);
-            throw new InvalidResponseException("Unable to create payment profile for existing customer");
+            $error = $response->getMessages()[0];
+            switch ($error->getCode()) {
+              case 'E00039':
+                if (!isset($response->customerPaymentProfileId)) {
+                  throw new InvalidResponseException('Duplicate payment profile ID, however could not get existing ID.');
+                }
+                break;
+
+              case 'E00040':
+                // The customer record ID is invalid, remove it.
+                // @note this should only happen in development scenarios.
+                $this->setRemoteCustomerId($owner, NULL);
+                $owner->save();
+                throw new InvalidResponseException('The customer record could not be found');
+
+              default:
+                throw new InvalidResponseException($error->getText());
+            }
           }
 
           $payment_profile_id = $response->customerPaymentProfileId;
         }
         else {
-          $this->logResponse($response);
-          throw new InvalidResponseException("Unable to create customer profile.");
+          $request = new CreateCustomerProfileRequest($this->authnetConfiguration, $this->httpClient);
+
+          if ($owner->isAuthenticated()) {
+            $profile = new Profile([
+              // @todo how to allow altering.
+              'merchantCustomerId' => $owner->id(),
+              'email' => $owner->getEmail(),
+            ]);
+          }
+          else {
+            $profile = new Profile([
+              // @todo how to allow altering.
+              'merchantCustomerId' => $owner->id() . '_' . $this->time->getRequestTime(),
+              'email' => $payment_details['customer_email'],
+            ]);
+          }
+          $profile->addPaymentProfile($this->buildCustomerPaymentProfile($payment_method, $payment_details));
+          $request->setProfile($profile);
+          $response = $request->execute();
+
+          if ($response->getResultCode() == 'Ok') {
+            $payment_profile_id = $response->customerPaymentProfileIdList->numericString;
+            $customer_profile_id = $response->customerProfileId;
+          }
+          else {
+            // Handle duplicate.
+            if ($response->getMessages()[0]->getCode() == 'E00039') {
+              $result = array_filter(explode(' ', $response->getMessages()[0]->getText()), 'is_numeric');
+              $customer_profile_id = reset($result);
+
+              $payment_profile = $this->buildCustomerPaymentProfile($payment_method, $payment_details, $customer_profile_id);
+              $request = new CreateCustomerPaymentProfileRequest($this->authnetConfiguration, $this->httpClient);
+              $request->setCustomerProfileId($customer_profile_id);
+              $request->setPaymentProfile($payment_profile);
+              $response = $request->execute();
+
+              if ($response->getResultCode() != 'Ok') {
+                $this->logResponse($response);
+                throw new InvalidResponseException("Unable to create payment profile for existing customer");
+              }
+
+              $payment_profile_id = $response->customerPaymentProfileId;
+            }
+            else {
+              $this->logResponse($response);
+              throw new InvalidResponseException("Unable to create customer profile.");
+            }
+          }
+
+          if ($owner) {
+            $this->setRemoteCustomerId($owner, $customer_profile_id);
+            $owner->save();
+          }
         }
-      }
 
-      if ($owner) {
-        $this->setRemoteCustomerId($owner, $customer_profile_id);
-        $owner->save();
-      }
+        // Maybe we should make sure that this is going to be a string before calling an explode on it.
+        if ($owner->isAuthenticated()) {
+          $validation_direct_response = explode(',', $response->contents()->validationDirectResponse);
+
+          // when user is authenticated we can retrieve customer profile from the user entity so
+          // we only need to save the payment profile id as token.
+          $remote_id = $payment_profile_id;
+        }
+        else {
+          // somehow for anonymous user it's returning this way
+          $validation_direct_response = explode(',', $response->contents()->validationDirectResponseList->string);
+
+          // For anonymous user we use both customer id
+          // and payment profile id as token.
+          $remote_id = $customer_profile_id . '|' . $payment_profile_id;
+        }
+        // Assuming the explode is working card_type is at index 51.
+        $card_type = $validation_direct_response[51];
+        return [
+          'remote_id' => $remote_id,
+          'card_type' => $card_type,
+          'last4' => $payment_details['last4'],
+          'expiration_month' => $payment_details['expiration_month'],
+          'expiration_year' => $payment_details['expiration_year'],
+        ];
+        break;
+
+      case 'authnet_echeck':
+        return [
+          'remote_id' => $payment_details['data_descriptor'] . '|' . $payment_details['data_value'],
+        ];
+      break;
     }
-
-    // Maybe we should make sure that this is going to be a string before calling an explode on it.
-    if ($owner->isAuthenticated()) {
-      $validation_direct_response = explode(',', $response->contents()->validationDirectResponse);
-
-      // when user is authenticated we can retrieve customer profile from the user entity so
-      // we only need to save the payment profile id as token.
-      $token = $payment_profile_id;
-    }
-    else {
-      // somehow for anonymous user it's returning this way
-      $validation_direct_response = explode(',', $response->contents()->validationDirectResponseList->string);
-
-      // For anonymous user we use both customer id
-      // and payment profile id as token.
-      $token = $customer_profile_id . '|' . $payment_profile_id;
-    }
-
-    // Assuming the explode is working card_type is at index 51 and mask card number at index 50
-    // on the form XXXX1111. Not sure if we should use this to get last4 and remove the one in JS.
-    // The explode doesn't work as expected I guess we are screwed.
-    $card_type = $validation_direct_response[51];
-
-    return [
-      'token' => $token,
-      'data_descriptor' => $payment_details['data_descriptor'],
-      'data_value' => $payment_details['data_value'],
-      'card_type' => $card_type,
-      'last4' => $payment_details['last4'],
-      'expiration_month' => $payment_details['expiration_month'],
-      'expiration_year' => $payment_details['expiration_year'],
-    ];
   }
 
   /**

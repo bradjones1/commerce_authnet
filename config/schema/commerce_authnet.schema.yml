@@ -7,6 +7,9 @@ commerce_payment.commerce_payment_gateway.plugin.authorizenet:
     transaction_key:
       type: string
       label: 'Transaction key'
+    client_key:
+      type: string
+      label: 'Client key'
     transaction_type:
       type: string
       label: 'Transaction type'

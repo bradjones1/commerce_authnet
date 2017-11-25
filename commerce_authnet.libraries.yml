@@ -8,10 +8,21 @@ accept-js-production:
   js:
     "https://js.authorize.net/v1/Accept.js": { type: external, attributes: { charset: utf-8 } }
 
-form:
+form-accept:
   version: VERSION
   js:
     js/commmerce_authnet.form.js: {}
+    js/commmerce_authnet.accept.form.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+
+form-echeck:
+  version: VERSION
+  js:
+    js/commmerce_authnet.form.js: {}
+    js/commmerce_authnet.echeck.form.js: {}
   dependencies:
     - core/jquery
     - core/drupal

@@ -4,8 +4,21 @@ namespace Drupal\commerce_authnet\PluginForm\AuthorizeNet;
 
 use Drupal\commerce_payment\PluginForm\PaymentMethodAddForm as BasePaymentMethodAddForm;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\commerce_authnet\Plugin\Commerce\PaymentMethodType\AuthorizeNetEcheck;
 
 class PaymentMethodAddForm extends BasePaymentMethodAddForm {
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
+    $form = parent::buildConfigurationForm($form, $form_state);
+    $payment_method = $this->entity;
+    if ($payment_method->bundle() === 'authnet_echeck') {
+      $form['payment_details'] = $this->buildEcheckForm($form['payment_details'], $form_state);
+    }
+    return $form;
+  }
 
   /**
    * {@inheritdoc}
@@ -22,27 +35,35 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     else {
       $element['#attached']['library'][] = 'commerce_authnet/accept-js-production';
     }
-    $element['#attached']['library'][] = 'commerce_authnet/form';
+    $element['#attached']['library'][] = 'commerce_authnet/form-accept';
     $element['#attached']['drupalSettings']['commerceAuthorizeNet'] = [
       'clientKey' => $plugin->getClientKey(),
       'apiLoginID' => $plugin->getApiLogin(),
-      'fieldsSelector' => [
-        'creditCardNumber' => ['selector' => '#credit-card-number-element'],
-        'cvv' => ['selector' => '#cvv-element'],
-        'expirationMonth' => ['selector' => '#expiration-month-element'],
-        'expirationYear' => ['selector' => '#expiration-year-element'],
-      ],
+      'paymentMethodType' => 'credit_card',
     ];
 
     // Fields placeholder to be built by the JS
-    $element['number'] = [
-      '#type' => 'item',
+    $element['credit_card_number'] = [
+      '#type' => 'textfield',
       '#title' => t('Card number'),
-      '#label_attributes' => [
-        'class' => ['js-form-required', 'form-required'],
+      '#attributes' => [
+        'placeholder' => '•••• •••• •••• ••••',
+        'autocomplete' => 'off',
+        'autocorrect' =>  'off',
+        'autocapitalize' => 'none',
+        'id' => 'credit-card-number',
+        'required' => 'required',
       ],
-      '#markup' => '<div id="credit-card-number-element" class="accept-js-form-element"></div>',
+      '#label_attributes' => [
+        'class' => [
+          'js-form-required',
+          'form-required',
+        ],
+      ],
+      '#maxlength' => 20,
+      '#size' => 20,
     ];
+
     $element['expiration'] = [
       '#type' => 'container',
       '#attributes' => [
@@ -50,33 +71,71 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       ],
     ];
     $element['expiration']['month'] = [
-      '#type' => 'item',
+      '#type' => 'textfield',
       '#title' => t('Month'),
-      '#label_attributes' => [
-        'class' => ['js-form-required', 'form-required'],
+      '#attributes' => [
+        'placeholder' => 'MM',
+        'autocomplete' => 'off',
+        'autocorrect' =>  'off',
+        'autocapitalize' => 'none',
+        'id' => 'expiration-month',
+        'required' => 'required',
       ],
-      '#markup' => '<div id="expiration-month-element" class="accept-js-form-element"></div>',
+      '#label_attributes' => [
+         'class' => [
+           'js-form-required',
+           'form-required',
+         ],
+      ],
+      '#maxlength' => 2,
+      '#size' => 3,
     ];
+
     $element['expiration']['divider'] = [
       '#type' => 'item',
       '#title' => '',
       '#markup' => '<span class="credit-card-form__divider">/</span>',
     ];
     $element['expiration']['year'] = [
-      '#type' => 'item',
+      '#type' => 'textfield',
       '#title' => t('Year'),
-      '#label_attributes' => [
-        'class' => ['js-form-required', 'form-required'],
+      '#attributes' => [
+        'placeholder' => 'YY',
+        'autocomplete' => 'off',
+        'autocorrect' =>  'off',
+        'autocapitalize' => 'none',
+        'id' => 'expiration-year',
+        'required' => 'required',
       ],
-      '#markup' => '<div id="expiration-year-element" class="accept-js-form-element"></div>',
+      '#label_attributes' => [
+        'class' => [
+          'js-form-required',
+          'form-required',
+        ],
+      ],
+      '#maxlength' => 2,
+      '#size' => 3,
     ];
+
     $element['security_code'] = [
-      '#type' => 'item',
+      '#type' => 'textfield',
       '#title' => t('CVV'),
-      '#label_attributes' => [
-        'class' => ['js-form-required', 'form-required'],
+      '#attributes' => [
+        'placeholder' => '•••',
+        'autocomplete' => 'off',
+        'autocorrect' =>  'off',
+        'autocapitalize' => 'none',
+        'id' => 'cvv',
+        'required' => 'required',
       ],
-      '#markup' => '<div id="cvv-element" class="accept-js-form-element"></div>',
+      '#label_attributes' => [
+        'class' => [
+          'js-form-required',
+          'form-required',
+        ],
+      ],
+      '#maxlength' => 4,
+      '#size' => 4,
     ];
 
     // Populated by the JS library after receiving a response from AuthorizeNet.
@@ -133,6 +192,93 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       $payment_details['customer_email'] = $values['contact_information']['email'];
       $form_state->setValue(['payment_information', 'add_payment_method', 'payment_details'], $payment_details);
     }
+  }
+
+  /**
+   * Builds the eCheckk form.
+   */
+  public function buildEcheckForm(array $element, FormStateInterface $form_state) {
+    // Alter the form with AuthorizeNet Accept JS specific needs.
+    $element['#attributes']['class'][] = 'authorize-net-accept-js-form';
+    /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AuthorizeNetInterface $plugin */
+    $plugin = $this->plugin;
+
+    if ($plugin->getMode() == 'test') {
+      $element['#attached']['library'][] = 'commerce_authnet/accept-js-sandbox';
+    }
+    else {
+      $element['#attached']['library'][] = 'commerce_authnet/accept-js-production';
+    }
+    $element['#attached']['library'][] = 'commerce_authnet/form-echeck';
+    $element['#attached']['drupalSettings']['commerceAuthorizeNet'] = [
+      'clientKey' => $plugin->getClientKey(),
+      'apiLoginID' => $plugin->getApiLogin(),
+      'paymentMethodType' => 'authnet_echeck',
+    ];
+
+    $element['routing_number'] = [
+      '#type' => 'textfield',
+      '#title' => t('Routing number'),
+      '#description' => t("The bank's routing number."),
+      '#attributes' => [
+        'class' => ['authnet-echeck-routing-number'],
+      ],
+    ];
+    $element['account_number'] = [
+      '#type' => 'textfield',
+      '#title' => t('Bank account'),
+      '#description' => t('The bank account number.'),
+      '#attributes' => [
+        'class' => ['authnet-echeck-account-number'],
+      ],
+    ];
+    $element['name_on_account'] = [
+      '#type' => 'textfield',
+      '#title' => t('Name on account'),
+      '#description' => t('The name of the person who holds the bank account.'),
+      '#attributes' => [
+        'class' => ['authnet-echeck-name-on-account'],
+      ],
+    ];
+    $element['account_type'] = [
+      '#type' => 'select',
+      '#title' => t('Account type'),
+      '#description' => t('The type of bank account. Currently only WEB eCheck ACH transactions are supported.'),
+      '#options' => AuthorizeNetEcheck::getAccountTypes(),
+      '#attributes' => [
+        'class' => ['authnet-echeck-account-type'],
+      ],
+    ];
+
+    // Populated by the JS library after receiving a response from AuthorizeNet.
+    $element['data_descriptor'] = [
+      '#type' => 'hidden',
+      '#attributes' => [
+        'class' => ['accept-js-data-descriptor'],
+      ],
+    ];
+    $element['data_value'] = [
+      '#type' => 'hidden',
+      '#attributes' => [
+        'class' => ['accept-js-data-value'],
+      ],
+    ];
+
+    return $element;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function validateEcheckForm(array &$element, FormStateInterface $form_state) {
+    // The JS library performs its own validation.
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitEcheckForm(array $element, FormStateInterface $form_state) {
+    // The payment gateway plugin will process the submitted payment details.
   }
 
 }
