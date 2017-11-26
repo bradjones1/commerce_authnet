@@ -2,7 +2,9 @@
 
 namespace Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway;
 
+use CommerceGuys\AuthNet\DataTypes\LineItem;
 use CommerceGuys\AuthNet\Response\ResponseInterface;
+use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use Drupal\commerce_payment\Exception\HardDeclineException;
@@ -225,7 +227,7 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
     $order = $payment->getOrder();
     $owner = $payment_method->getOwner();
 
-    // Transaction request
+    // Transaction request.
     $transaction_request = new TransactionRequest([
       'transactionType' => ($capture) ? TransactionRequest::AUTH_CAPTURE : TransactionRequest::AUTH_ONLY,
       'amount' => $payment->getAmount()->getNumber(),
@@ -259,11 +261,17 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
       $transaction_request->addData('payment', $payment_data);
     }
 
-    // Adding order information to the transaction
+    // Adding order information to the transaction.
     $transaction_request->addOrder(new OrderDataType([
-      'invoiceNumber' => $order->getOrderNumber(),
+      'invoiceNumber' => $order->getOrderNumber() ?: $order->id(),
     ]));
     $transaction_request->addData('customerIP', $order->getIpAddress());
+
+    // Adding line items.
+    $line_items = $this->getLineItems($order);
+    foreach ($line_items as $line_item) {
+      $transaction_request->addLineItem($line_item);
+    }
 
     $request = new CreateTransactionRequest($this->authnetConfiguration, $this->httpClient);
     $request->setTransactionRequest($transaction_request);
@@ -397,7 +405,7 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
   public function createPaymentMethod(PaymentMethodInterface $payment_method, array $payment_details) {
     $payment_method_type = $payment_method->getType()->getPluginId();
     $required_keys = [
-      'data_descriptor', 'data_value'
+      'data_descriptor', 'data_value',
     ];
     foreach ($required_keys as $required_key) {
       if (empty($payment_details[$required_key])) {
@@ -427,8 +435,8 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
         $payment_method->setRemoteId($remote_payment_method['remote_id']);
         break;
     }
-    // OpaqueData expire after 15min. We reduce that time by 5s to account for the
-    // time it took to do the server request after the JS tokenization.
+    // OpaqueData expire after 15min. We reduce that time by 5s to account for
+    // the time it took to do the server request after the JS tokenization.
     $expires = $this->time->getRequestTime() + (15 * 60) - 5;
     $payment_method->setExpiresTime($expires);
     $payment_method->save();
@@ -718,6 +726,32 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
       '%code' => $response->getResultCode(),
       '@messages' => implode("\n", $messages),
     ]);
+  }
+
+  /**
+   * Gets the line items from order.
+   *
+   * @param \Drupal\commerce_order\Entity\OrderInterface $order
+   *   The order.
+   *
+   * @return \CommerceGuys\AuthNet\DataTypes\LineItem[]
+   *   An array of line items.
+   */
+  protected function getLineItems(OrderInterface $order) {
+    $line_items = [];
+    foreach ($order->getItems() as $order_item) {
+      $name = $order_item->label();
+      $name = (strlen($name) > 31) ? substr($name, 0, 28) . '...' : $name;
+
+      $line_items[] = new LineItem([
+        'itemId' => $order_item->id(),
+        'name' => $name,
+        'quantity' => $order_item->getQuantity(),
+        'unitPrice' => $order_item->getUnitPrice()->getNumber(),
+      ]);
+    }
+
+    return $line_items;
   }
 
 }
