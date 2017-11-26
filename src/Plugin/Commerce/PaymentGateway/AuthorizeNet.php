@@ -604,18 +604,22 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
   protected function buildCustomerPaymentProfile(PaymentMethodInterface $payment_method, array $payment_details, $customer_id = NULL) {
     /** @var \Drupal\address\AddressInterface $address */
     $address = $payment_method->getBillingProfile()->address->first();
-    $bill_to = new BillTo([
+    $bill_to = [
       // @todo how to allow customizing this.
       'firstName' => $address->getGivenName(),
       'lastName' => $address->getFamilyName(),
       'company' => $address->getOrganization(),
       'address' => $address->getAddressLine1() . ' ' . $address->getAddressLine2(),
-      // @todo Use locality  / administrative area codes where available.
       'city' => $address->getLocality(),
-      'zip' => $address->getPostalCode(),
       'country' => $address->getCountryCode(),
       // @todo support adding phone and fax
-    ]);
+    ];
+    if ($address->getAdministrativeArea() != '') {
+      $bill_to['state'] = $address->getAdministrativeArea();
+    }
+    if ($address->getPostalCode() != '') {
+      $bill_to['zip'] = $address->getPostalCode();
+    }
 
     $payment = new OpaqueData([
       'dataDescriptor' => $payment_details['data_descriptor'],
@@ -626,7 +630,7 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
       // @todo how to allow customizing this.
       'customerType' => 'individual',
     ]);
-    $payment_profile->addBillTo($bill_to);
+    $payment_profile->addBillTo(new BillTo($bill_to));
     $payment_profile->addPayment($payment);
 
     return $payment_profile;
