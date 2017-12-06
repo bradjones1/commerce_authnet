@@ -19,10 +19,10 @@
       var $submit = $form.find('input.button--primary');
       $submit.prop('disabled', false);
       var settings = drupalSettings.commerceAuthorizeNet;
-      if (settings.paymentMethodType == 'credit_card') {
+      if (settings.paymentMethodType === 'credit_card') {
         Drupal.commerceAuthorizeNetAcceptForm($form, settings);
       }
-      else if (settings.paymentMethodType == 'authnet_echeck') {
+      else if (settings.paymentMethodType === 'authnet_echeck') {
         Drupal.commerceAuthorizeNetEcheckForm($form, settings);
       }
     },
@@ -30,6 +30,17 @@
       var $form = $('.authorize-net-accept-js-form').closest('form');
       $form.removeOnce('authorize-net-accept-js-processed');
       $form.off('submit.authnet');
+    },
+    errorDisplay: function (code, error_message) {
+      console.log(code + ': ' + error_message);
+      var $form = $('.authorize-net-accept-js-form').closest('form');
+      // Display the message error in the payment form.
+      var errors = $form.find('#payment-errors');
+      errors.html(Drupal.theme('commerceAuthorizeNetError', error_message));
+      $('html, body').animate({ scrollTop: errors.offset().top });
+
+      // Allow the customer to re-submit the form.
+      $form.find('button').prop('disabled', false);
     }
   };
 

@@ -44,14 +44,10 @@
     var responseHandler = function (response) {
       if (response.messages.resultCode === 'Error') {
         for (var i = 0; i < response.messages.message.length; i++) {
-          console.log(response.messages.message[i].code + ': ' + response.messages.message[i].text);
+          Drupal.behaviors.commerceAuthorizeNetForm.errorDisplay(response.messages.message[i].code, response.messages.message[i].text);
         }
-        alert('acceptJS library error!');
-        event.preventDefault();
       }
       else {
-        console.log(response);
-        console.log(response.opaqueData);
 
         $('.accept-js-data-descriptor', $form).val(response.opaqueData.dataDescriptor);
         $('.accept-js-data-value', $form).val(response.opaqueData.dataValue);

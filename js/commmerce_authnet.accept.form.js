@@ -1,6 +1,6 @@
 /**
  * @file
- * Javascript to handle the authorize.net accept.js form.
+ * Javascript to generate Accept.js token in PCI-compliant way.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -18,7 +18,7 @@
     var $submit = $form.find('input.button--primary');
     $submit.prop('disabled', false);
 
-    // Sends the card data to Authorize.Net and receive the payment nonce in 
+    // Sends the card data to Authorize.Net and receive the payment nonce in
     // response.
     var sendPaymentDataToAnet = function (event) {
       var secureData = {};
@@ -51,14 +51,10 @@
     var responseHandler = function (response) {
       if (response.messages.resultCode === 'Error') {
         for (var i = 0; i < response.messages.message.length; i++) {
-          console.log(response.messages.message[i].code + ': ' + response.messages.message[i].text);
+          Drupal.behaviors.commerceAuthorizeNetForm.errorDisplay(response.messages.message[i].code, response.messages.message[i].text);
         }
-        alert('acceptJS library error!');
-        event.preventDefault();
       }
       else {
-        console.log(response);
-        console.log(response.opaqueData);
         processTransactionDataFromAnet(response.opaqueData);
       }
     };
@@ -72,8 +68,7 @@
       $('.accept-js-data-year', $form).val(expiration.year);
 
       // Clear out the values so they don't get posted to Drupal. They would
-      // never be used, but for PCI complaince we should never send them at 
-      // all.
+      // never be used, but for PCI compliance we should never send them at.
       $('#credit-card-number').val('');
       $('#expiration-month').val('');
       $('#expiration-year').val('');

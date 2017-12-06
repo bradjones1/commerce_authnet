@@ -42,14 +42,14 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       'paymentMethodType' => 'credit_card',
     ];
 
-    // Fields placeholder to be built by the JS
+    // Fields placeholder to be built by the JS.
     $element['credit_card_number'] = [
       '#type' => 'textfield',
       '#title' => t('Card number'),
       '#attributes' => [
         'placeholder' => '•••• •••• •••• ••••',
         'autocomplete' => 'off',
-        'autocorrect' =>  'off',
+        'autocorrect' => 'off',
         'autocapitalize' => 'none',
         'id' => 'credit-card-number',
         'required' => 'required',
@@ -76,16 +76,16 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       '#attributes' => [
         'placeholder' => 'MM',
         'autocomplete' => 'off',
-        'autocorrect' =>  'off',
+        'autocorrect' => 'off',
         'autocapitalize' => 'none',
         'id' => 'expiration-month',
         'required' => 'required',
       ],
       '#label_attributes' => [
-         'class' => [
-           'js-form-required',
-           'form-required',
-         ],
+        'class' => [
+          'js-form-required',
+          'form-required',
+        ],
       ],
       '#maxlength' => 2,
       '#size' => 3,
@@ -102,7 +102,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       '#attributes' => [
         'placeholder' => 'YY',
         'autocomplete' => 'off',
-        'autocorrect' =>  'off',
+        'autocorrect' => 'off',
         'autocapitalize' => 'none',
         'id' => 'expiration-year',
         'required' => 'required',
@@ -123,7 +123,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       '#attributes' => [
         'placeholder' => '•••',
         'autocomplete' => 'off',
-        'autocorrect' =>  'off',
+        'autocorrect' => 'off',
         'autocapitalize' => 'none',
         'id' => 'cvv',
         'required' => 'required',
@@ -136,6 +136,13 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
       ],
       '#maxlength' => 4,
       '#size' => 4,
+    ];
+
+    // To display validation errors.
+    $element['payment_errors'] = [
+      '#type' => 'markup',
+      '#markup' => '<div id="payment-errors"></div>',
+      '#weight' => -200,
     ];
 
     // Populated by the JS library after receiving a response from AuthorizeNet.
