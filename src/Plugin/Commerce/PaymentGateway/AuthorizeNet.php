@@ -618,10 +618,12 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
       'lastName' => $address->getFamilyName(),
       'company' => $address->getOrganization(),
       'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
-      'city' => $address->getLocality(),
       'country' => $address->getCountryCode(),
       // @todo support adding phone and fax
     ];
+    if ($address->getLocality() != '') {
+      $bill_to['city'] = $address->getLocality();
+    }
     if ($address->getAdministrativeArea() != '') {
       $bill_to['state'] = $address->getAdministrativeArea();
     }
