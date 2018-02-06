@@ -202,7 +202,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
   }
 
   /**
-   * Builds the eCheckk form.
+   * Builds the eCheck form.
    */
   public function buildEcheckForm(array $element, FormStateInterface $form_state) {
     // Alter the form with AuthorizeNet Accept JS specific needs.

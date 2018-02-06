@@ -25,6 +25,9 @@
       else if (settings.paymentMethodType === 'authnet_echeck') {
         Drupal.commerceAuthorizeNetEcheckForm($form, settings);
       }
+      else if (settings.paymentMethodType === 'authnet_visa') {
+        Drupal.commerceAuthorizeNetVisaForm($form, settings);
+      }
     },
     detach: function (context) {
       var $form = $('.authorize-net-accept-js-form').closest('form');

@@ -8,22 +8,51 @@ accept-js-production:
   js:
     "https://js.authorize.net/v1/Accept.js": { type: external, attributes: { charset: utf-8 } }
 
-form-accept:
+form-authnet:
   version: VERSION
   js:
-    js/commmerce_authnet.form.js: {}
-    js/commmerce_authnet.accept.form.js: {}
+    js/commerce_authnet.form.js: {}
   dependencies:
     - core/jquery
     - core/drupal
     - core/jquery.once
 
-form-echeck:
+form-accept:
   version: VERSION
   js:
-    js/commmerce_authnet.form.js: {}
-    js/commmerce_authnet.echeck.form.js: {}
+    js/commerce_authnet.accept.form.js: {}
   dependencies:
     - core/jquery
     - core/drupal
     - core/jquery.once
+    - commerce_authnet/form-authnet
+
+form-echeck:
+  version: VERSION
+  js:
+    js/commerce_authnet.echeck.form.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+    - commerce_authnet/form-authnet
+
+form-visa-checkout:
+  version: VERSION
+  js:
+    js/commerce_authnet.visa.form.js: {}
+  dependencies:
+  - core/jquery
+  - core/drupal
+  - core/jquery.once
+  - commerce_authnet/form-authnet
+
+form-visa-checkout-sandbox:
+  version: 1
+  js:
+    "https://sandbox-assets.secure.checkout.visa.com/checkout-widget/resources/js/integration/v1/sdk.js": { type: external, attributes: { charset: utf-8 } }
+
+form-visa-checkout-production:
+  version: 1
+  js:
+    "https://assets.secure.checkout.visa.com/checkout-widget/resources/js/integration/v1/sdk.js": { type: external, attributes: { charset: utf-8 } }
