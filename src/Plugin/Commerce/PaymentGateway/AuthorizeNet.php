@@ -416,29 +416,25 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
 
     switch ($payment_method_type) {
       case 'credit_card':
-        // @todo Make payment methods reusable. Currently they represent 15min
-        // nonce.
-        // @see https://community.developer.authorize.net/t5/Integration-and-Testing/Question-about-tokens-transaction-keys/td-p/56689
-        // "You are correct that the Accept.js payment nonce must be used within
-        // 15 minutes before it expires."
-        // Meet specific requirements for reusable, permanent methods.
-        $payment_method->setReusable(FALSE);
         $payment_method->card_type = $this->mapCreditCardType($remote_payment_method['card_type']);
         $payment_method->card_number = $remote_payment_method['last4'];
         $payment_method->card_exp_month = $remote_payment_method['expiration_month'];
         $payment_method->card_exp_year = $remote_payment_method['expiration_year'];
         $payment_method->setRemoteId($remote_payment_method['remote_id']);
+        $payment_method->setExpiresTime(0);
         break;
 
       case 'authnet_echeck':
+        // Reusing echecks is not supported at the moment.
+        // @see https://community.developer.authorize.net/t5/Integration-and-Testing/Accept-JS-and-ACH/td-p/55874
         $payment_method->setReusable(FALSE);
         $payment_method->setRemoteId($remote_payment_method['remote_id']);
+        // OpaqueData expire after 15min. We reduce that time by 5s to account for
+        // the time it took to do the server request after the JS tokenization.
+        $expires = $this->time->getRequestTime() + (15 * 60) - 5;
+        $payment_method->setExpiresTime($expires);
         break;
     }
-    // OpaqueData expire after 15min. We reduce that time by 5s to account for
-    // the time it took to do the server request after the JS tokenization.
-    $expires = $this->time->getRequestTime() + (15 * 60) - 5;
-    $payment_method->setExpiresTime($expires);
     $payment_method->save();
   }
 
