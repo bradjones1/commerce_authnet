@@ -43,7 +43,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     ];
 
     // Fields placeholder to be built by the JS.
-    $element['credit_card_number'] = [
+    $element['number'] = [
       '#type' => 'textfield',
       '#title' => t('Card number'),
       '#attributes' => [
