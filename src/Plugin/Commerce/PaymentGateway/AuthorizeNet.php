@@ -369,6 +369,11 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
       'amount' => $amount->getNumber(),
       'refTransId' => $payment->getRemoteId(),
     ]);
+    // Adding order information to the transaction.
+    $order = $payment->getOrder();
+    $transaction_request->addOrder(new OrderDataType([
+      'invoiceNumber' => $order->getOrderNumber() ?: $order->id(),
+    ]));
     /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
     $payment_method = $payment->getPaymentMethod();
     $transaction_request->addPayment(new CreditCardDataType([
