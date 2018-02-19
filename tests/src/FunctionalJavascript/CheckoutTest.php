@@ -79,6 +79,7 @@ class CheckoutTest extends CommerceBrowserTestBase {
       'transaction_key' => '346HZ32z3fP4hTG2',
       'mode' => 'test',
       'payment_method_types' => ['credit_card'],
+      'client_key' => 'test-client-key',
     ]);
     $gateway->save();
 
@@ -108,7 +109,7 @@ class CheckoutTest extends CommerceBrowserTestBase {
     $this->submitForm([
       'contact_information[email]' => 'guest@example.com',
       'contact_information[email_confirm]' => 'guest@example.com',
-      'payment_information[add_payment_method][payment_details][credit_card_number]' => '411111111111111',
+      'payment_information[add_payment_method][payment_details][number]' => '411111111111111',
       'payment_information[add_payment_method][payment_details][expiration][month]' => '02',
       'payment_information[add_payment_method][payment_details][expiration][year]' => '2020',
       'payment_information[add_payment_method][payment_details][security_code]' => '123',
@@ -147,7 +148,7 @@ class CheckoutTest extends CommerceBrowserTestBase {
     $this->submitForm([], 'Checkout');
     $this->assertSession()->pageTextContains('Order Summary');
     $this->submitForm([
-      'payment_information[add_payment_method][payment_details][credit_card_number]' => '4111111111111111',
+      'payment_information[add_payment_method][payment_details][number]' => '4111111111111111',
       'payment_information[add_payment_method][payment_details][expiration][month]' => '02',
       'payment_information[add_payment_method][payment_details][expiration][year]' => '2020',
       'payment_information[add_payment_method][payment_details][security_code]' => '123',
