@@ -5,6 +5,7 @@ namespace Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway;
 use CommerceGuys\AuthNet\DataTypes\LineItem;
 use CommerceGuys\AuthNet\Response\ResponseInterface;
 use Drupal\commerce_order\Entity\OrderInterface;
+use Drupal\commerce_payment\CreditCard;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use Drupal\commerce_payment\Exception\HardDeclineException;
@@ -426,7 +427,8 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
         $payment_method->card_exp_month = $remote_payment_method['expiration_month'];
         $payment_method->card_exp_year = $remote_payment_method['expiration_year'];
         $payment_method->setRemoteId($remote_payment_method['remote_id']);
-        $payment_method->setExpiresTime(0);
+        $expires = CreditCard::calculateExpirationTimestamp($remote_payment_method['expiration_month'], $remote_payment_method['expiration_year']);
+        $payment_method->setExpiresTime($expires);
         break;
 
       case 'authnet_echeck':
