@@ -261,6 +261,29 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
         ],
       ];
       $transaction_request->addData('payment', $payment_data);
+
+      /** @var \Drupal\address\AddressInterface $address */
+      $address = $payment_method->getBillingProfile()->address->first();
+      $bill_to = [
+        // @todo how to allow customizing this.
+        'firstName' => $address->getGivenName(),
+        'lastName' => $address->getFamilyName(),
+        'company' => $address->getOrganization(),
+        'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
+        'country' => $address->getCountryCode(),
+        // @todo support adding phone and fax
+      ];
+      if ($address->getLocality() != '') {
+        $bill_to['city'] = $address->getLocality();
+      }
+      if ($address->getAdministrativeArea() != '') {
+        $bill_to['state'] = $address->getAdministrativeArea();
+      }
+      if ($address->getPostalCode() != '') {
+        $bill_to['zip'] = $address->getPostalCode();
+      }
+      $transaction_request->addDataType(new BillTo($bill_to));
+
     }
     if (\Drupal::moduleHandler()->moduleExists('commerce_shipping') && $order->hasField('shipments') && !($order->get('shipments')->isEmpty())) {
       /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface[] $shipments */
@@ -274,11 +297,17 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
         'lastName' => $shipping_address->getFamilyName(),
         'address' => substr($shipping_address->getAddressLine1() . ' ' . $shipping_address->getAddressLine2(), 0, 60),
         'country' => $shipping_address->getCountryCode(),
-        'state' => $shipping_address->getAdministrativeArea(),
         'company' => $shipping_address->getOrganization(),
-        'city' => $shipping_address->getLocality(),
-        'zip' => $shipping_address->getPostalCode(),
       ];
+      if ($shipping_address->getLocality() != '') {
+        $ship_data['city'] = $shipping_address->getLocality();
+      }
+      if ($shipping_address->getAdministrativeArea() != '') {
+        $ship_data['state'] = $shipping_address->getAdministrativeArea();
+      }
+      if ($shipping_address->getPostalCode() != '') {
+        $ship_data['zip'] = $shipping_address->getPostalCode();
+      }
       $transaction_request->addDataType(new ShipTo($ship_data));
     }
 
