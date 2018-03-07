@@ -69,7 +69,7 @@
     // Form submit.
     $form.on('submit.authnet', function (event, options) {
       // Disable the submit button to prevent repeated clicks.
-      $form.find('button').prop('disabled', true);
+      $form.find('.button--primary').prop('disabled', true);
       options = options || {};
       if (options.populated) {
         return;

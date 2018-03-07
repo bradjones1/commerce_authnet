@@ -16,8 +16,7 @@
       if ($form.length === 0) {
         return;
       }
-      var $submit = $form.find('input.button--primary');
-      $submit.prop('disabled', false);
+      $form.find('.button--primary').prop('disabled', false);
       var settings = drupalSettings.commerceAuthorizeNet;
       if (settings.paymentMethodType === 'credit_card') {
         Drupal.commerceAuthorizeNetAcceptForm($form, settings);
@@ -43,7 +42,7 @@
       $('html, body').animate({ scrollTop: errors.offset().top });
 
       // Allow the customer to re-submit the form.
-      $form.find('button').prop('disabled', false);
+      $form.find('.button--primary').prop('disabled', false);
     }
   };
 

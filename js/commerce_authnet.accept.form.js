@@ -15,8 +15,7 @@
     // To be used to temporarily store month and year.
     var expiration = {};
 
-    var $submit = $form.find('input.button--primary');
-    $submit.prop('disabled', false);
+    $form.find('.button--primary').prop('disabled', false);
 
     // Sends the card data to Authorize.Net and receive the payment nonce in
     // response.
@@ -81,7 +80,7 @@
     // Form submit.
     $form.on('submit.authnet', function (event, options) {
       // Disable the submit button to prevent repeated clicks.
-      $form.find('button').prop('disabled', true);
+      $form.find('.button--primary').prop('disabled', true);
       options = options || {};
       if (options.populated) {
         return;
