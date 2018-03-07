@@ -359,6 +359,12 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
    * {@inheritdoc}
    */
   public function refundPayment(PaymentInterface $payment, Price $amount = NULL) {
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
+    $payment_method = $payment->getPaymentMethod();
+    $payment_method_type = $payment_method->getType()->getPluginId();
+    if ($payment_method_type === 'authnet_echeck') {
+      throw new PaymentGatewayException($this->t('Echeck transactions cannot be refunded.'));
+    }
     $this->assertPaymentState($payment, ['completed', 'partially_refunded']);
     // If not specified, refund the entire amount.
     $amount = $amount ?: $payment->getAmount();
@@ -375,8 +381,6 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
     $transaction_request->addOrder(new OrderDataType([
       'invoiceNumber' => $order->getOrderNumber() ?: $order->id(),
     ]));
-    /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
-    $payment_method = $payment->getPaymentMethod();
     $transaction_request->addPayment(new CreditCardDataType([
       'cardNumber' => $payment_method->card_number->value,
       'expirationDate' => str_pad($payment_method->card_exp_month->value, 2, '0', STR_PAD_LEFT) . str_pad($payment_method->card_exp_year->value, 2, '0', STR_PAD_LEFT),
