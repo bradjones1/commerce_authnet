@@ -2,8 +2,6 @@
 
 namespace Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway;
 
-use CommerceGuys\AuthNet\DataTypes\LineItem;
-use CommerceGuys\AuthNet\Response\ResponseInterface;
 use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\CreditCard;
 use Drupal\commerce_payment\Entity\PaymentInterface;
@@ -25,14 +23,17 @@ use CommerceGuys\AuthNet\CreateCustomerProfileRequest;
 use CommerceGuys\AuthNet\CreateTransactionRequest;
 use CommerceGuys\AuthNet\DataTypes\BillTo;
 use CommerceGuys\AuthNet\DataTypes\CreditCard as CreditCardDataType;
+use CommerceGuys\AuthNet\DataTypes\LineItem;
 use CommerceGuys\AuthNet\DataTypes\MerchantAuthentication;
 use CommerceGuys\AuthNet\DataTypes\Order as OrderDataType;
 use CommerceGuys\AuthNet\DataTypes\OpaqueData;
 use CommerceGuys\AuthNet\DataTypes\PaymentProfile;
 use CommerceGuys\AuthNet\DataTypes\Profile;
 use CommerceGuys\AuthNet\DataTypes\TransactionRequest;
+use CommerceGuys\AuthNet\DataTypes\ShipTo;
 use CommerceGuys\AuthNet\DeleteCustomerPaymentProfileRequest;
 use CommerceGuys\AuthNet\Request\XmlRequest;
+use CommerceGuys\AuthNet\Response\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -260,6 +261,25 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
         ],
       ];
       $transaction_request->addData('payment', $payment_data);
+    }
+    if (\Drupal::moduleHandler()->moduleExists('commerce_shipping') && $order->hasField('shipments') && !($order->get('shipments')->isEmpty())) {
+      /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface[] $shipments */
+      $shipments = $payment->getOrder()->get('shipments')->referencedEntities();
+      $first_shipment = reset($shipments);
+      /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $shipping_address */
+      $shipping_address = $first_shipment->getShippingProfile()->address->first();
+      $ship_data = [
+        // @todo how to allow customizing this.
+        'firstName' => $shipping_address->getGivenName(),
+        'lastName' => $shipping_address->getFamilyName(),
+        'address' => substr($shipping_address->getAddressLine1() . ' ' . $shipping_address->getAddressLine2(), 0, 60),
+        'country' => $shipping_address->getCountryCode(),
+        'state' => $shipping_address->getAdministrativeArea(),
+        'company' => $shipping_address->getOrganization(),
+        'city' => $shipping_address->getLocality(),
+        'zip' => $shipping_address->getPostalCode(),
+      ];
+      $transaction_request->addDataType(new ShipTo($ship_data));
     }
 
     // Adding order information to the transaction.
