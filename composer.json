@@ -12,6 +12,6 @@
     },
     "require": {
         "drupal/commerce": "~2.0",
-        "commerceguys/authnet": "^1.0.0-beta4"
+        "commerceguys/authnet": "^1.0.0-beta5"
     }
 }

@@ -36,6 +36,7 @@ use CommerceGuys\AuthNet\Request\XmlRequest;
 use CommerceGuys\AuthNet\Response\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use CommerceGuys\AuthNet\DataTypes\Tax;
 
 /**
  * Provides the Authorize.net payment gateway.
@@ -322,6 +323,9 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
     foreach ($line_items as $line_item) {
       $transaction_request->addLineItem($line_item);
     }
+
+    // Adding tax information to the transaction.
+    $transaction_request->addData('tax', $this->getTax($order)->toArray());
 
     $request = new CreateTransactionRequest($this->authnetConfiguration, $this->httpClient);
     $request->setTransactionRequest($transaction_request);
@@ -810,6 +814,60 @@ class AuthorizeNet extends OnsitePaymentGatewayBase implements AuthorizeNetInter
     }
 
     return $line_items;
+  }
+
+  /**
+   * Gets the tax from order.
+   *
+   * @param \Drupal\commerce_order\Entity\OrderInterface $order
+   *   The order.
+   *
+   * @return \CommerceGuys\AuthNet\DataTypes\Tax
+   *   The total tax.
+   */
+  protected function getTax(OrderInterface $order) {
+    $amount = 0;
+    $labels = [];
+
+    foreach ($order->collectAdjustments() as $adjustment) {
+      if ($adjustment->getType() !== 'tax') {
+        continue;
+      }
+      $amount += $adjustment->getAmount()->getNumber();
+      $labels[] = $adjustment->getLabel();
+    }
+
+    // Determine whether multiple tax types are present.
+    $labels = array_unique($labels);
+    if (empty($labels)) {
+      $name = '';
+      $description = '';
+    }
+    elseif (count($labels) > 1) {
+      $name = 'Multiple Tax Types';
+      $description = implode(', ', $labels);
+    }
+    else {
+      $name = $labels[0];
+      $description = $labels[0];
+    }
+
+    // Limit name, description fields to 32, 255 characters.
+    $name = (strlen($name) > 31) ? substr($name, 0, 28) . '...' : $name;
+    $description = (strlen($description) > 255) ? substr($description, 0, 252) . '...' : $description;
+
+    // If amount is negative, do not transmit any information.
+    if ($amount < 0) {
+      $amount = 0;
+      $name = '';
+      $description = '';
+    }
+
+    return new Tax([
+      'amount' => $amount,
+      'name' => $name,
+      'description' => $description,
+    ]);
   }
 
 }
