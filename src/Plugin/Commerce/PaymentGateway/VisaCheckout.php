@@ -192,27 +192,6 @@ class VisaCheckout extends OffsitePaymentGatewayBase {
   /**
    * {@inheritdoc}
    */
-  public function getVisaCheckoutApiKey() {
-    return $this->configuration['visa_checkout_api_key'];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getClientKey() {
-    return $this->configuration['client_key'];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getApiLogin() {
-    return $this->configuration['api_login'];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function onReturn(OrderInterface $order, Request $request) {
     if ($request->request->has('error'))  {
       $error = $request->request->get('error');
@@ -253,7 +232,6 @@ class VisaCheckout extends OffsitePaymentGatewayBase {
       $create_transaction_request = new CreateTransactionRequest($this->authnetConfiguration, $this->httpClient);
       $create_transaction_request->setTransactionRequest($transaction_request);
       $create_transaction_response = $create_transaction_request->execute();
-
 
       if ($create_transaction_response->getResultCode() != 'Ok') {
         $this->logResponse($create_transaction_response);

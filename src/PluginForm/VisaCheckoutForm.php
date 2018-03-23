@@ -18,7 +18,7 @@ class VisaCheckoutForm extends PaymentOffsiteForm {
 
     $form['authnet_visa']['#type'] = 'container';
     $form['authnet_visa']['#attributes']['class'][] = 'authorize-net-accept-js-form';
-    /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AuthorizeNetOffsiteInterface $plugin */
+    /** @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\PaymentGatewayBase $plugin */
     $plugin = $this->plugin;
 
     $form['authnet_visa']['#attached']['library'][] = 'commerce_authnet/form-visa-checkout';
@@ -38,7 +38,7 @@ class VisaCheckoutForm extends PaymentOffsiteForm {
 
 
     $form['authnet_visa']['#attached']['drupalSettings']['commerceAuthorizeNet'] = [
-      'visaApiKey' => $plugin->getVisaCheckoutApiKey(),
+      'visaApiKey' => $plugin->getConfiguration()['visa_checkout_api_key'],
       'paymentMethodType' => 'authnet_visa',
       'currencyCode' => $payment->getAmount()->getCurrencyCode(),
       'number' => $payment->getAmount()->getNumber(),

@@ -44,7 +44,7 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
     $values = [
       'id' => 'authorize_net_us',
       'label' => 'Authorize.net US',
-      'plugin' => 'authorizenet',
+      'plugin' => 'authorizenet_acceptjs',
       'configuration[authorizenet][api_login]' => '5KP3u95bQpv',
       'configuration[authorizenet][transaction_key]' => '346HZ32z3fP4hTG2',
       'configuration[authorizenet][client_key]' => 'test-client-key',
@@ -56,7 +56,7 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
     $payment_gateway = PaymentGateway::load('authorize_net_us');
     $this->assertEquals('authorize_net_us', $payment_gateway->id());
     $this->assertEquals('Authorize.net US', $payment_gateway->label());
-    $this->assertEquals('authorizenet', $payment_gateway->getPluginId());
+    $this->assertEquals('authorizenet_acceptjs', $payment_gateway->getPluginId());
     $this->assertEquals(TRUE, $payment_gateway->status());
     $payment_gateway_plugin = $payment_gateway->getPlugin();
     $this->assertEquals('test', $payment_gateway_plugin->getMode());

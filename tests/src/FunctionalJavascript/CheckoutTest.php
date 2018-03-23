@@ -72,7 +72,7 @@ class CheckoutTest extends CommerceBrowserTestBase {
     $gateway = PaymentGateway::create([
       'id' => 'authorize_net_us',
       'label' => 'Authorize.net US',
-      'plugin' => 'authorizenet',
+      'plugin' => 'authorizenet_acceptjs',
     ]);
     $gateway->getPlugin()->setConfiguration([
       'api_login' => '5KP3u95bQpv',
