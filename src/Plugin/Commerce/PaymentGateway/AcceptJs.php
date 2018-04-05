@@ -23,6 +23,10 @@ use CommerceGuys\AuthNet\DataTypes\Profile;
 use CommerceGuys\AuthNet\DataTypes\TransactionRequest;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsRefundsInterface;
 use CommerceGuys\AuthNet\DataTypes\ShipTo;
+use Drupal\Core\Form\FormStateInterface;
+use Lcobucci\JWT\Parser;
+use Lcobucci\JWT\Signer\Hmac\Sha256;
+use CommerceGuys\AuthNet\DataTypes\CardholderAuthentication;
 
 /**
  * Provides the Accept.js payment gateway.
@@ -45,11 +49,158 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
   /**
    * {@inheritdoc}
    */
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
+    $form = parent::buildConfigurationForm($form, $form_state);
+
+    $form['cca_status'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Enable Cardinal Cruise Authentication'),
+      '#default_value' => $this->configuration['cca_status'],
+    ];
+    $form['cca'] = [
+      '#type' => 'fieldset',
+      '#title' => $this->t('Cardinal Cruise Authentication'),
+      '#states' => [
+        'visible' => [
+          'input[name="configuration[authorizenet_acceptjs][cca_status]"]' => [
+            'checked' => TRUE,
+          ],
+        ],
+      ],
+      '#description' => $this->t('In test mode the credentials provided here are not used (but the fields are still required).')
+    ];
+
+    $form['cca']['cca_api_id'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('API Identifier'),
+      '#default_value' => $this->configuration['cca_api_id'],
+      '#states' => [
+        'required' => [
+          'input[name="configuration[authorizenet_acceptjs][cca_status]"]' => [
+            'checked' => TRUE,
+          ],
+        ],
+      ],
+    ];
+
+    $form['cca']['cca_org_unit_id'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Org Unit ID'),
+      '#default_value' => $this->configuration['cca_org_unit_id'],
+      '#states' => [
+        'required' => [
+          'input[name="configuration[authorizenet_acceptjs][cca_status]"]' => [
+            'checked' => TRUE,
+          ],
+        ],
+      ],
+    ];
+
+    $form['cca']['cca_api_key'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('API key'),
+      '#default_value' => $this->configuration['cca_api_key'],
+      '#states' => [
+        'required' => [
+          'input[name="configuration[authorizenet_acceptjs][cca_status]"]' => [
+            'checked' => TRUE,
+          ],
+        ],
+      ],
+    ];
+
+    return $form;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
+    parent::submitConfigurationForm($form, $form_state);
+
+    if (!$form_state->getErrors()) {
+      $values = $form_state->getValue($form['#parents']);
+      $this->configuration['cca_status'] = $values['cca_status'];
+      $this->configuration['cca_api_id'] = $values['cca']['cca_api_id'];
+      $this->configuration['cca_org_unit_id'] = $values['cca']['cca_org_unit_id'];
+      $this->configuration['cca_api_key'] = $values['cca']['cca_api_key'];
+    }
+  }
+
+  /**
+   * Get the CCA API Identifier.
+   *
+   * @return string
+   */
+  public function getCcaApiId() {
+    if ($this->configuration['cca_status']) {
+      // Test API Id.
+      // @see https://developer.cardinalcommerce.com/try-it-now.shtml
+      if ($this->configuration['mode'] == 'test') {
+        return '582e0a2033fadd1260f990f6';
+      }
+      else {
+        return $this->configuration['cca_api_id'];
+      }
+    }
+  }
+
+  /**
+   * Get the CCA API Identifier.
+   *
+   * @return string
+   */
+  public function getCcaOrgUnitId() {
+    if ($this->configuration['cca_status']) {
+      // Test Org Unit ID.
+      // @see https://developer.cardinalcommerce.com/try-it-now.shtml
+      if ($this->configuration['mode'] == 'test') {
+        return '582be9deda52932a946c45c4';
+      }
+      else {
+        return $this->configuration['cca_org_unit_id'];
+      }
+    }
+  }
+
+  /**
+   * Get the CCA API Key.
+   *
+   * @return string
+   */
+  public function getCcaApiKey() {
+    if ($this->configuration['cca_status']) {
+      // Test API Key.
+      // @see https://developer.cardinalcommerce.com/try-it-now.shtml
+      if ($this->configuration['mode'] == 'test') {
+        return '754be3dc-10b7-471f-af31-f20ce12b9ec1';
+      }
+      else {
+        return $this->configuration['cca_api_key'];
+      }
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public function getJsLibrary() {
+    if ($this->configuration['cca_status']) {
+      if ($this->getMode() === 'test') {
+        return 'commerce_authnet/cardinalcruise-dev';
+      }
+      return 'commerce_authnet/cardinalcruise';
+    }
+    return 'commerce_authnet/form-accept';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function createPayment(PaymentInterface $payment, $capture = TRUE) {
     $this->assertPaymentState($payment, ['new']);
     $payment_method = $payment->getPaymentMethod();
     $this->assertPaymentMethod($payment_method);
-
 
     $order = $payment->getOrder();
     $owner = $payment_method->getOwner();
@@ -59,6 +210,35 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
       'transactionType' => ($capture) ? TransactionRequest::AUTH_CAPTURE : TransactionRequest::AUTH_ONLY,
       'amount' => $payment->getAmount()->getNumber(),
     ]);
+
+    $tempstore_3ds = $this->privateTempStore->get('commerce_authnet')->get($payment_method->id());
+    if (!empty($tempstore_3ds)) {
+      // Do not send ECI and CAVV values when reusing a payment method.
+      $payment_method_has_been_used = $this->entityQueryService->get('commerce_payment')
+        ->condition('payment_method', $payment_method->id())
+        ->execute();
+      if (!$payment_method_has_been_used) {
+        $cardholder_authentication = new CardholderAuthentication();
+        $cardholder_authentication_empty = TRUE;
+        if (!empty($tempstore_3ds['eci']) && $tempstore_3ds['eci'] != '07') {
+          $cardholder_authentication->authenticationIndicator = $tempstore_3ds['eci'];
+          $cardholder_authentication_empty = FALSE;
+        }
+        if (!empty($tempstore_3ds['cavv'])) {
+          // This is quite undocumented, but seems that cavv needs to be
+          // urlencoded.
+          // @see https://community.developer.authorize.net/t5/Integration-and-Testing/Cardholder-Authentication-extraOptions-invalid-error/td-p/57955
+          $cardholder_authentication->cardholderAuthenticationValue = urlencode($tempstore_3ds['cavv']);
+          $cardholder_authentication_empty = FALSE;
+        }
+        if (!$cardholder_authentication_empty) {
+          $transaction_request->addDataType($cardholder_authentication);
+        }
+      }
+      else {
+        $this->privateTempStore->get('commerce_authnet')->delete($payment_method->id());
+      }
+    }
 
     // @todo update SDK to support data type like this.
     // Initializing the profile to charge and adding it to the transaction.
@@ -127,6 +307,10 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
         case 'E00040':
           $payment_method->delete();
           throw new PaymentGatewayException('The provided payment method is no longer valid');
+
+        case 'E00042':
+          $payment_method->delete();
+          throw new PaymentGatewayException('You cannot add more than 10 payment methods.');
 
         default:
           throw new PaymentGatewayException($message->getText());
@@ -199,6 +383,27 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
    * @todo Needs kernel test
    */
   public function createPaymentMethod(PaymentMethodInterface $payment_method, array $payment_details) {
+    // We don't want 3DS on the user payment method form.
+    if (!empty($this->getConfiguration()['cca_status']) && !empty($payment_details['cca_jwt_token'])) {
+      if (empty($payment_details['cca_jwt_response_token'])) {
+        throw new PaymentGatewayException('Cannot continue when CCA is enabled but not used.');
+      }
+
+      /** @var \Lcobucci\JWT\Token $token */
+      $token = (new Parser())->parse($payment_details['cca_jwt_response_token']);
+      $signer = new Sha256();
+
+      if (!$token->verify($signer, $this->getCcaApiKey())) {
+        throw new PaymentGatewayException('Response CCA JWT is not valid.');
+      }
+      $claims = $token->getClaims();
+      /** @var \Lcobucci\JWT\Claim $payload */
+      $payload = $claims['Payload'];
+      if (isset($payload->getValue()->Payment->ExtendedData->SignatureVerification) && $payload->getValue()->Payment->ExtendedData->SignatureVerification === 'N') {
+        throw new PaymentGatewayException('Unsuccessful signature verification.');
+      }
+    }
+
     $required_keys = [
       'data_descriptor', 'data_value',
     ];
@@ -217,6 +422,17 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
     $payment_method->setExpiresTime($expires);
 
     $payment_method->save();
+    if (!empty($this->getConfiguration()['cca_status']) && !empty($payment_details['cca_jwt_token'])) {
+      $value = [];
+      if (isset($payload->getValue()->Payment->ExtendedData->CAVV)) {
+        $value['cavv'] = $payload->getValue()->Payment->ExtendedData->CAVV;
+        $this->privateTempStore->get('commerce_authnet')->set($payment_method->id(), $value);
+      }
+      if (isset($payload->getValue()->Payment->ExtendedData->ECIFlag)) {
+        $value['eci'] = $payload->getValue()->Payment->ExtendedData->ECIFlag;
+        $this->privateTempStore->get('commerce_authnet')->set($payment_method->id(), $value);
+      }
+    }
   }
 
   /**

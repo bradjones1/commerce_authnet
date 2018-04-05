@@ -28,6 +28,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayInterface;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsAuthorizationsInterface;
 use CommerceGuys\AuthNet\DataTypes\Tax;
+use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\TempStore\PrivateTempStoreFactory;
 
 /**
  * Provides the Authorize.net payment gateway base class.
@@ -56,9 +58,23 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
   protected $logger;
 
   /**
+   * The entity field query service.
+   *
+   * @var \Drupal\Core\Entity\Query\QueryFactory
+   */
+  protected $entityQueryService;
+
+  /**
+   * The private temp store factory.
+   *
+   * @var \Drupal\Core\TempStore\PrivateTempStoreFactory
+   */
+  protected $privateTempStore;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time, ClientInterface $client, LoggerInterface $logger) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time, ClientInterface $client, LoggerInterface $logger, QueryFactory $entity_query_service, PrivateTempStoreFactory $private_tempstore) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager, $time);
 
     $this->httpClient = $client;
@@ -69,6 +85,8 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
       'transaction_key' => $this->configuration['transaction_key'],
       'client_key' => $this->configuration['client_key'],
     ]);
+    $this->entityQueryService = $entity_query_service;
+    $this->privateTempStore = $private_tempstore;
   }
 
   /**
@@ -84,7 +102,9 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
       $container->get('plugin.manager.commerce_payment_method_type'),
       $container->get('datetime.time'),
       $container->get('http_client'),
-      $container->get('commerce_authnet.logger')
+      $container->get('commerce_authnet.logger'),
+      $container->get('entity.query'),
+      $container->get('tempstore.private')
     );
   }
 

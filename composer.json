@@ -12,6 +12,7 @@
     },
     "require": {
         "drupal/commerce": "~2.0",
-        "commerceguys/authnet": "^1.0.0-beta5"
+        "commerceguys/authnet": "^1.0.0-beta6",
+        "lcobucci/jwt": "~3.1"
     }
 }

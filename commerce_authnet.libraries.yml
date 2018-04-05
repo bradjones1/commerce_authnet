@@ -56,3 +56,19 @@ form-visa-checkout-production:
   version: 1
   js:
     "https://assets.secure.checkout.visa.com/checkout-widget/resources/js/integration/v1/sdk.js": { type: external, attributes: { charset: utf-8 } }
+
+cardinalcruise-dev:
+  version: 1
+  header: true
+  js:
+    "https://songbirdstag.cardinalcommerce.com/edge/v1/songbird.js": { type: external, attributes: { charset: utf-8 } }
+  dependencies:
+  - commerce_authnet/form-accept
+
+cardinalcruise:
+  version: 1
+  header: true
+  js:
+    "https://songbird.cardinalcommerce.com/edge/v1/songbird.js": { type: external, attributes: { charset: utf-8 } }
+  dependencies:
+  - commerce_authnet/form-accept
