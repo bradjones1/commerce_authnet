@@ -48,6 +48,7 @@ class ManagePaymentMethodsTest extends CommerceBrowserTestBase {
    * {@inheritdoc}
    */
   protected function setUp() {
+    $this->markTestIncomplete();
     parent::setUp();
 
     $this->createStore('Demo', 'demo@example.com', 'default', TRUE);
