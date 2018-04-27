@@ -494,6 +494,7 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
       }
 
       $payment_profile_id = $response->customerPaymentProfileId;
+      $validation_direct_response = explode(',', $response->validationDirectResponse);
     }
     else {
       $request = new CreateCustomerProfileRequest($this->authnetConfiguration, $this->httpClient);
@@ -519,6 +520,7 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
       if ($response->getResultCode() == 'Ok') {
         $payment_profile_id = $response->customerPaymentProfileIdList->numericString;
         $customer_profile_id = $response->customerProfileId;
+        $validation_direct_response = explode(',', $response->validationDirectResponseList->string);
       }
       else {
         // Handle duplicate.
@@ -538,6 +540,7 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
           }
 
           $payment_profile_id = $response->customerPaymentProfileId;
+          $validation_direct_response = explode(',', $response->validationDirectResponse);
         }
         else {
           $this->logResponse($response);
@@ -545,33 +548,17 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
         }
       }
 
-      if ($owner) {
+      if ($owner->isAuthenticated()) {
         $this->setRemoteCustomerId($owner, $customer_profile_id);
         $owner->save();
       }
     }
 
-    // Maybe we should make sure that this is going to be a string before calling an explode on it.
-    if ($owner->isAuthenticated()) {
-      $validation_direct_response = explode(',', $response->contents()->validationDirectResponse);
 
-      // when user is authenticated we can retrieve customer profile from the user entity so
-      // we only need to save the payment profile id as token.
-      $remote_id = $payment_profile_id;
-    }
-    else {
-      // somehow for anonymous user it's returning this way
-      $validation_direct_response = explode(',', $response->contents()->validationDirectResponseList->string);
-
-      // For anonymous user we use both customer id
-      // and payment profile id as token.
-      $remote_id = $customer_profile_id . '|' . $payment_profile_id;
-    }
-    // Assuming the explode is working card_type is at index 51.
-    $card_type = $validation_direct_response[51];
+    $remote_id = ($owner->isAuthenticated()) ? $payment_profile_id : $customer_profile_id . '|' . $payment_profile_id;
     return [
       'remote_id' => $remote_id,
-      'card_type' => $card_type,
+      'card_type' => $validation_direct_response[51],
       'last4' => $payment_details['last4'],
       'expiration_month' => $payment_details['expiration_month'],
       'expiration_year' => $payment_details['expiration_year'],
@@ -622,7 +609,7 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
       // @todo how to allow customizing this.
       'customerType' => 'individual',
     ]);
-    $payment_profile->addBillTo(new BillTo($bill_to));
+    $payment_profile->addBillTo(new BillTo(array_filter($bill_to)));
     $payment_profile->addPayment($payment);
 
     return $payment_profile;
