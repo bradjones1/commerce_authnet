@@ -231,4 +231,56 @@ class AcceptJsCreatePaymentMethodTest extends CommerceKernelTestBase implements 
     $this->assertEquals('mastercard', $payment_method->card_type->value);
   }
 
+  /**
+   * Tests creating a payment method which has the delimeter in the address.
+   *
+   * @group debug
+   */
+  public function testWithDataWhichHasDelimeter() {
+    $user = User::getAnonymousUser();
+    $profile = Profile::create([
+      'type' => 'customer',
+      'address' => [
+        'country_code' => 'US',
+        'postal_code' => '53177',
+        'locality' => 'Milwaukee',
+        'address_line1' => 'Pabst, Blue Ribbon Dr',
+        'administrative_area' => 'WI',
+        'given_name' => 'Frederick',
+        'family_name' => 'Pabst',
+      ],
+      'uid' => $user,
+    ]);
+    $profile->save();
+
+
+    /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AcceptJs $plugin */
+    $plugin = $this->gateway->getPlugin();
+    $opaque_data = $this->createDataDescriptor();
+
+    /** @var \Drupal\commerce_payment\PaymentMethodStorageInterface $payment_method_storage */
+    $payment_method_storage = $this->container->get('entity_type.manager')->getStorage('commerce_payment_method');
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
+    $payment_method = $payment_method_storage->create([
+      'type' => 'credit_card',
+      'payment_gateway' => $this->gateway->id(),
+      'uid' => $user,
+      'billing_profile' => $profile,
+    ]);
+
+    $plugin->createPaymentMethod(
+      $payment_method,
+      [
+        'data_descriptor' => $opaque_data->dataDescriptor,
+        'data_value' => $opaque_data->dataValue,
+        'customer_email' => $this->randomString() . '@example.com',
+        'last4' => '0015',
+        'expiration_month' => '12',
+        'expiration_year' => '2020',
+      ]
+    );
+    $this->assertNotEmpty($payment_method->id());
+    $this->assertEquals('mastercard', $payment_method->card_type->value);
+  }
+
 }

@@ -572,10 +572,22 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
       }
     }
 
+    // The result in validationDirectResponse does not properly escape any
+    // delimiter characters in the response data. So if the address, name, or
+    // email have "," the key for the card type is offset.
+    //
+    // We know the card type is after the XXXX#### masked card number.
+    $card_type_key = 51;
+    foreach ($validation_direct_response as $key => $value) {
+      if (!empty($value) && strpos($value, 'XXXX') !== FALSE) {
+        $card_type_key = ($key + 1);
+      }
+    }
+
     $remote_id = ($owner->isAuthenticated()) ? $payment_profile_id : $customer_profile_id . '|' . $payment_profile_id;
     return [
       'remote_id' => $remote_id,
-      'card_type' => $validation_direct_response[51],
+      'card_type' => $validation_direct_response[$card_type_key],
       'last4' => $payment_details['last4'],
       'expiration_month' => $payment_details['expiration_month'],
       'expiration_year' => $payment_details['expiration_year'],
