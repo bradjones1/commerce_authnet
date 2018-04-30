@@ -45,6 +45,22 @@ class CheckoutTest extends CommerceBrowserTestBase {
 
   /**
    * {@inheritdoc}
+   *
+   * Force HTTPs for checkout. And automatically catch the exception if it fails
+   * so we can mark the rest as skipped.
+   */
+  protected function drupalGet($path, array $options = [], array $headers = []) {
+    try {
+      $options['https'] = TRUE;
+      return parent::drupalGet($path, $options, $headers);
+    }
+    catch (\Exception $e) {
+      $this->markTestSkipped('Unable to access page over HTTPS');
+    }
+  }
+
+  /**
+   * {@inheritdoc}
    */
   protected function setUp() {
     parent::setUp();
@@ -99,12 +115,7 @@ class CheckoutTest extends CommerceBrowserTestBase {
    */
   public function testGuestAuthorizeNetPayment() {
     $this->drupalLogout();
-    try {
-      $this->drupalGet($this->product->toUrl()->toString(), ['https' => TRUE]);
-    }
-    catch (\Exception $e) {
-      $this->markTestSkipped('Unable to access page over HTTPS');
-    }
+    $this->drupalGet($this->product->toUrl()->toString());
     $this->submitForm([], 'Add to cart');
     $cart_link = $this->getSession()->getPage()->findLink('your cart');
     $cart_link->click();
@@ -146,12 +157,7 @@ class CheckoutTest extends CommerceBrowserTestBase {
    * @group registered
    */
   public function testRegisteredAuthorizeNetPayment() {
-    try {
-      $this->drupalGet($this->product->toUrl()->toString(), ['https' => TRUE]);
-    }
-    catch (\Exception $e) {
-      $this->markTestSkipped('Unable to access page over HTTPS');
-    }
+    $this->drupalGet($this->product->toUrl()->toString());
     $this->submitForm([], 'Add to cart');
     $cart_link = $this->getSession()->getPage()->findLink('your cart');
     $cart_link->click();

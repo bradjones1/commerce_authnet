@@ -49,7 +49,6 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
       'configuration[authorizenet_acceptjs][api_login]' => '64EZ77a2w8',
       'configuration[authorizenet_acceptjs][transaction_key]' => '2rrbVvBR6949En2d',
       'configuration[authorizenet_acceptjs][client_key]' => '2fejMFQEzA2cg6C5wV3Kz398S94XkPbS56RU2Zq2tfjcmDhDVp8h8XmZ49JQLbY6',
-      'configuration[authorizenet_acceptjs][transaction_type]' => 'authCaptureTransaction',
       'configuration[authorizenet_acceptjs][mode]' => 'test',
       'status' => 1,
     ];
@@ -86,7 +85,6 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
       'configuration[authorizenet_echeck][api_login]' => '64EZ77a2w8',
       'configuration[authorizenet_echeck][transaction_key]' => '2rrbVvBR6949En2d',
       'configuration[authorizenet_echeck][client_key]' => '2fejMFQEzA2cg6C5wV3Kz398S94XkPbS56RU2Zq2tfjcmDhDVp8h8XmZ49JQLbY6',
-      'configuration[authorizenet_echeck][transaction_type]' => 'authCaptureTransaction',
       'configuration[authorizenet_echeck][mode]' => 'test',
       'status' => 1,
     ];

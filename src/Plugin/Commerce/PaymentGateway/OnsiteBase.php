@@ -14,6 +14,7 @@ use Drupal\commerce_price\Price;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
 use GuzzleHttp\ClientInterface;
 use CommerceGuys\AuthNet\Configuration;
 use CommerceGuys\AuthNet\CreateTransactionRequest;
@@ -116,7 +117,6 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
       'api_login' => '',
       'transaction_key' => '',
       'client_key' => '',
-      'transaction_type' => TransactionRequest::AUTH_ONLY,
     ] + parent::defaultConfiguration();
   }
 
@@ -147,17 +147,18 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
       '#required' => TRUE,
     ];
 
-    $form['transaction_type'] = [
-      '#type' => 'radios',
-      '#title' => $this->t('Default transaction type'),
-      '#description' => t('The default will be used to process transactions during checkout.'),
-      '#default_value' => $this->configuration['transaction_type'],
-      '#options' => [
-        TransactionRequest::AUTH_ONLY => $this->t('Authorization only (requires manual or automated capture after checkout)'),
-        TransactionRequest::AUTH_CAPTURE => $this->t('Authorization and capture'),
-        // @todo AUTH_ONLY but causes capture at placed transition.
-      ],
-    ];
+    try {
+      $url = Url::fromRoute('entity.commerce_checkout_flow.collection');
+      $form['transaction_type'] = [
+        '#markup' => $this->t('<p>To configure the transaction settings, modify the <em>Payment process</em> pane in your checkout flow. From there you can choose authorization only or authorization and capture. You can manage your checkout flows here: <a href=":url">:url</a></p>', [
+          ':url' => $url->toString(),
+        ]),
+      ];
+    }
+    catch (\Exception $e) {
+      // Route was malformed, such as checkout not being enabled. So do nothing.
+    }
+
     return $form;
   }
 
@@ -198,10 +199,8 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
       $this->configuration['api_login'] = $values['api_login'];
       $this->configuration['transaction_key'] = $values['transaction_key'];
       $this->configuration['client_key'] = $values['client_key'];
-      $this->configuration['transaction_type'] = $values['transaction_type'];
     }
   }
-
 
   /**
    * {@inheritdoc}
