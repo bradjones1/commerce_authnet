@@ -346,6 +346,24 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
       'amount' => $amount->getNumber(),
       'refTransId' => $payment->getRemoteId(),
     ]);
+
+    // Add customer Billing information to satisfy AVS.
+    /** @var \Drupal\address\AddressInterface $address */
+    $address = $payment_method->getBillingProfile()->address->first();
+    $bill_to = array_filter([
+      // @todo how to allow customizing this.
+      'firstName' => $address->getGivenName(),
+      'lastName' => $address->getFamilyName(),
+      'company' => $address->getOrganization(),
+      'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
+      'country' => $address->getCountryCode(),
+      'city' => $address->getLocality(),
+      'state' => $address->getAdministrativeArea(),
+      'zip' => $address->getPostalCode(),
+      // @todo support adding phone and fax
+    ]);
+    $transaction_request->addDataType(new BillTo($bill_to));
+
     // Adding order information to the transaction.
     $order = $payment->getOrder();
     $transaction_request->addOrder(new OrderDataType([
@@ -554,7 +572,6 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
       }
     }
 
-
     $remote_id = ($owner->isAuthenticated()) ? $payment_profile_id : $customer_profile_id . '|' . $payment_profile_id;
     return [
       'remote_id' => $remote_id,
@@ -581,24 +598,18 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
   protected function buildCustomerPaymentProfile(PaymentMethodInterface $payment_method, array $payment_details, $customer_id = NULL) {
     /** @var \Drupal\address\AddressInterface $address */
     $address = $payment_method->getBillingProfile()->address->first();
-    $bill_to = [
+    $bill_to = array_filter([
       // @todo how to allow customizing this.
       'firstName' => $address->getGivenName(),
       'lastName' => $address->getFamilyName(),
       'company' => $address->getOrganization(),
       'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
       'country' => $address->getCountryCode(),
+      'city' => $address->getLocality(),
+      'state' => $address->getAdministrativeArea(),
+      'zip' => $address->getPostalCode(),
       // @todo support adding phone and fax
-    ];
-    if ($address->getLocality() != '') {
-      $bill_to['city'] = $address->getLocality();
-    }
-    if ($address->getAdministrativeArea() != '') {
-      $bill_to['state'] = $address->getAdministrativeArea();
-    }
-    if ($address->getPostalCode() != '') {
-      $bill_to['zip'] = $address->getPostalCode();
-    }
+    ]);
 
     $payment = new OpaqueData([
       'dataDescriptor' => $payment_details['data_descriptor'],
@@ -609,7 +620,7 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
       // @todo how to allow customizing this.
       'customerType' => 'individual',
     ]);
-    $payment_profile->addBillTo(new BillTo(array_filter($bill_to)));
+    $payment_profile->addBillTo(new BillTo($bill_to));
     $payment_profile->addPayment($payment);
 
     return $payment_profile;
