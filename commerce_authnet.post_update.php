@@ -15,21 +15,31 @@ use Drupal\commerce_order\Entity\Order;
  * payment_methods and payments.
  */
 function commerce_authnet_post_update_echeck(&$sandbox) {
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $payment_gateway_storage = $entity_type_manager->getStorage('commerce_payment_gateway');
+  $payment_method_storage = $entity_type_manager->getStorage('commerce_payment_method');
+  $payment_storage = $entity_type_manager->getStorage('commerce_payment');
+  $order_storage = $entity_type_manager->getStorage('commerce_order');
+
   if (!isset($sandbox['progress'])) {
     $sandbox['progress'] = 0;
     $sandbox['echeck_payment_methods'] = [];
-    $gateways = PaymentGateway::loadMultiple();
+    /** @var \Drupal\commerce_payment\Entity\PaymentGatewayInterface[] $gateways */
+    $gateways = $payment_gateway_storage->loadMultiple();
     foreach ($gateways as $gateway) {
       if ($gateway->getPluginId() !== 'authorizenet') {
         continue;
       }
       $config = $gateway->getPluginConfiguration();
+      unset($config['transaction_type']);
       $original_label = $gateway->label();
       foreach ($config['payment_method_types'] as $payment_method_type) {
         if ($payment_method_type === 'credit_card') {
           // We only rename ids and labels if both credit card and echeck was
           // enabled.
           $gateway->setPluginId('authorizenet_acceptjs');
+          // Changing the plugin ID will reset the configuration, put it back.
+          $gateway->setPluginConfiguration($config);
           if (count($config['payment_method_types']) > 1) {
             $gateway->set('label', $original_label . ' ' . t('Credit card'));
             $new_config = $config;
@@ -50,20 +60,19 @@ function commerce_authnet_post_update_echeck(&$sandbox) {
             $new_gateway->set('id', $gateway->id() . '_echeck');
             $new_gateway->set('label', $gateway->label() . ' ' . t('Echeck'));
             $new_config['display_label'] .= ' ' . t('Echeck');
-            $sandbox['echeck_payment_methods'] += \Drupal::entityQuery('commerce_payment_method')
+            $sandbox['echeck_payment_methods'] += $payment_method_storage->getQuery()
               ->condition('type', 'authnet_echeck')
               ->condition('payment_gateway', $gateway->id())
               ->execute();
             unset($new_config['payment_method_types']['credit_card']);
+            $new_gateway->setPluginConfiguration($new_config);
+            $new_gateway->save();
           }
           else {
             $gateway->setPluginId('authorizenet_echeck');
+            $gateway->setPluginConfiguration($config);
           }
         }
-      }
-      if (count($config['payment_method_types']) > 1) {
-        $new_gateway->setPluginConfiguration($new_config);
-        $new_gateway->save();
       }
       $gateway->save();
     }
@@ -71,29 +80,29 @@ function commerce_authnet_post_update_echeck(&$sandbox) {
   }
 
   // Update echeck orders, payment_methods and payments in batch.
-  for ($i = 1; $i <=20; $i++) {
+  for ($i = 1; $i <= 20; $i++) {
     if (empty($sandbox['echeck_payment_methods'])) {
       break;
     }
     $payment_method_id = array_shift($sandbox['echeck_payment_methods']);
-    $payment_method = PaymentMethod::load($payment_method_id);
+    $payment_method = $payment_method_storage->load($payment_method_id);
     $new_payment_gateway_id = $payment_method->getPaymentGatewayId() . '_echeck';
     $payment_method->set('payment_gateway', $new_payment_gateway_id);
     $payment_method->save();
 
-    $payment_ids = \Drupal::entityQuery('commerce_payment')
+    $payment_ids = $payment_storage->getQuery()
       ->condition('payment_method', $payment_method->id())
       ->execute();
     foreach ($payment_ids as $payment_id) {
-      $payment = Payment::load($payment_id);
+      $payment = $payment_storage->load($payment_id);
       $payment->set('payment_gateway', $new_payment_gateway_id);
       $payment->save();
     }
-    $order_ids = \Drupal::entityQuery('commerce_order')
+    $order_ids = $order_storage->getQuery()
       ->condition('payment_method', $payment_method->id())
       ->execute();
     foreach ($order_ids as $order_id) {
-      $order = Order::load($order_id);
+      $order = $order_storage->load($order_id);
       $order->set('payment_gateway', $new_payment_gateway_id);
       $order->save();
     }
