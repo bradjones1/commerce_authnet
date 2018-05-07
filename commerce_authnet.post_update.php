@@ -6,6 +6,7 @@
  */
 
 use Drupal\commerce_payment\Entity\PaymentGateway;
+use Drupal\commerce_payment\Entity\PaymentGatewayInterface;
 use Drupal\commerce_payment\Entity\PaymentMethod;
 use Drupal\commerce_payment\Entity\Payment;
 use Drupal\commerce_order\Entity\Order;
@@ -15,6 +16,7 @@ use Drupal\commerce_order\Entity\Order;
  * payment_methods and payments.
  */
 function commerce_authnet_post_update_echeck(&$sandbox) {
+  \Drupal::service('plugin.manager.commerce_payment_gateway')->clearCachedDefinitions();
   $entity_type_manager = \Drupal::entityTypeManager();
   $payment_gateway_storage = $entity_type_manager->getStorage('commerce_payment_gateway');
   $payment_method_storage = $entity_type_manager->getStorage('commerce_payment_method');
@@ -116,5 +118,29 @@ function commerce_authnet_post_update_echeck(&$sandbox) {
     $sandbox['#finished'] = 1;
   }
 
-  return t('All Authorize.net gateways, payment methods and payments have been updated.');
+  return t('All Authorize.net gateways, payment methods and payments have been updated. Please double check all configuration.');
+}
+
+/**
+ * Verify that AcceptJS and eCheck payment gateways have the client_key configured.
+ */
+function commerce_authnet_post_update_verify_client_key() {
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $payment_gateway_storage = $entity_type_manager->getStorage('commerce_payment_gateway');
+  /** @var \Drupal\commerce_payment\Entity\PaymentGatewayInterface[] $gateways */
+  $gateways = array_filter($payment_gateway_storage->loadMultiple(), function (PaymentGatewayInterface $gateway) {
+    return in_array($gateway->getPluginId(), ['authorizenet_acceptjs', 'authorizenet_echeck']);
+  });
+
+  $gateways_with_warnings = [];
+  foreach ($gateways as $gateway) {
+    $configuration = $gateway->getPluginConfiguration();
+    if (empty($configuration['client_key'])) {
+      $gateways_with_warnings[] = $gateway->label();
+    }
+  }
+
+  return t('Please provide a client key for %labels. It is required to continue accepting payments.', [
+    '%labels' => implode(', ', $gateways_with_warnings),
+  ]);
 }

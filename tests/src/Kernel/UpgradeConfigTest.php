@@ -3,6 +3,7 @@
 namespace Drupal\Tests\commerce_authnet\Kernel;
 
 use Drupal\commerce_payment\Entity\PaymentGateway;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\KernelTests\KernelTestBase;
 
 /**
@@ -30,7 +31,7 @@ class UpgradeConfigTest extends KernelTestBase {
     $this->assertCount(1, $gateways);
 
     $authnet_post_updates = $this->container->get('update.post_update_registry')->getModuleUpdateFunctions('commerce_authnet');
-    $this->assertCount(1, $authnet_post_updates);
+    $this->assertCount(2, $authnet_post_updates);
     foreach ($authnet_post_updates as $authnet_post_update) {
       $sandbox = [];
       $authnet_post_update($sandbox);
@@ -50,6 +51,28 @@ class UpgradeConfigTest extends KernelTestBase {
       'display_label' => 'Authorize.net',
       'payment_method_types' => ['credit_card'],
     ], $gateway_configuration);
+  }
+
+  public function testClientKeyMessage() {
+    $this->installFixture(__DIR__ . '/../../fixtures/authorizenet-pre-acceptjs.php.gz');
+    $results = [];
+    $authnet_post_updates = $this->container->get('update.post_update_registry')->getModuleUpdateFunctions('commerce_authnet');
+    $this->assertCount(2, $authnet_post_updates);
+    foreach ($authnet_post_updates as $authnet_post_update) {
+      $sandbox = [];
+      $results[] = $authnet_post_update($sandbox);
+    }
+
+    $this->assertCount(2, $results);
+
+    /** @var \Drupal\commerce_payment\Entity\PaymentGateway $gateway */
+    $gateway = PaymentGateway::load('authorizenet_pre_acceptjs');
+    $this->assertEquals(
+      t('Please provide a client key for %labels. It is required to continue accepting payments.', [
+        '%labels' => implode(', ', [$gateway->label()]),
+      ]),
+      $results[1]
+    );
 
   }
 
