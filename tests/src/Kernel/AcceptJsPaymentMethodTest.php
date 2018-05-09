@@ -4,7 +4,9 @@ namespace Drupal\Tests\commerce_authnet\Kernel;
 
 use CommerceGuys\AuthNet\Configuration;
 use CommerceGuys\AuthNet\DataTypes\MerchantAuthentication;
+use CommerceGuys\AuthNet\GetCustomerPaymentProfileRequest;
 use CommerceGuys\AuthNet\Request\JsonRequest;
+use Drupal\commerce_payment\CreditCard;
 use Drupal\commerce_payment\Entity\PaymentGateway;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\DependencyInjection\ServiceModifierInterface;
@@ -17,7 +19,7 @@ use Drupal\user\Entity\User;
  *
  * @group commerce_authnet
  */
-class AcceptJsCreatePaymentMethodTest extends CommerceKernelTestBase implements ServiceModifierInterface {
+class AcceptJsPaymentMethodTest extends CommerceKernelTestBase implements ServiceModifierInterface {
 
   /**
    * The payment gateway.
@@ -335,6 +337,89 @@ class AcceptJsCreatePaymentMethodTest extends CommerceKernelTestBase implements 
     );
     $this->assertNotEmpty($payment_method->id());
     $this->assertEquals('mastercard', $payment_method->card_type->value);
+  }
+
+  /**
+   * Tests creating the payment method for an authenticated users.
+   */
+  public function testUpdatePaymentMethod() {
+    $user = $this->createUser(['mail' => $this->randomString() . '@example.com']);
+    $profile = Profile::create([
+      'type' => 'customer',
+      'address' => [
+        'country_code' => 'US',
+        'postal_code' => '53177',
+        'locality' => 'Milwaukee',
+        'address_line1' => 'Pabst Blue Ribbon Dr',
+        'administrative_area' => 'WI',
+        'given_name' => 'Frederick',
+        'family_name' => 'Pabst',
+      ],
+      'uid' => $user->id(),
+    ]);
+    $profile->save();
+
+
+    /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AcceptJs $plugin */
+    $plugin = $this->gateway->getPlugin();
+    $opaque_data = $this->createDataDescriptor();
+
+    /** @var \Drupal\commerce_payment\PaymentMethodStorageInterface $payment_method_storage */
+    $payment_method_storage = $this->container->get('entity_type.manager')->getStorage('commerce_payment_method');
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
+    $payment_method = $payment_method_storage->create([
+      'type' => 'credit_card',
+      'payment_gateway' => $this->gateway->id(),
+      'uid' => $user->id(),
+      'billing_profile' => $profile,
+    ]);
+
+    $plugin->createPaymentMethod(
+      $payment_method,
+      [
+        'data_descriptor' => $opaque_data->dataDescriptor,
+        'data_value' => $opaque_data->dataValue,
+        'last4' => '0015',
+        'expiration_month' => '12',
+        'expiration_year' => '2020',
+      ]
+    );
+    $this->assertNotEmpty($payment_method->id());
+    $this->assertEquals('mastercard', $payment_method->card_type->value);
+
+    // Test the update.
+    $payment_method->get('card_exp_month')->setValue('02');
+    $payment_method->get('card_exp_year')->setValue('2026');
+    $expires = CreditCard::calculateExpirationTimestamp('02', '2026');
+    $payment_method->setExpiresTime($expires);
+
+    $plugin->updatePaymentMethod($payment_method);
+
+    // Manually get the customer payment profile and verify it was updated.
+    $user = $this->reloadEntity($user);
+    /** @var \Drupal\commerce\Plugin\Field\FieldType\RemoteIdFieldItemListInterface $remote_ids */
+    $remote_ids = $user->get('commerce_remote_id');
+    $customer_remote_id = $remote_ids->getByProvider($this->gateway->id() . '|' . $plugin->getMode());
+    $configuration = $this->createApiConfiguration();
+    $request = new GetCustomerPaymentProfileRequest($configuration, $this->container->get('http_client'));
+    $request->setCustomerProfileId($customer_remote_id);
+    $request->setCustomerPaymentProfileId($payment_method->getRemoteId());
+    $request->setUnmaskExpirationDate(TRUE);
+
+    $response = $request->execute();
+    $this->assertEquals('XXXX0015', $response->paymentProfile->payment->creditCard->cardNumber);
+    $this->assertEquals('2026-02', $response->paymentProfile->payment->creditCard->expirationDate);
+
+    // Assert the billing information was not lost.
+    $this->assertEquals((object) [
+      'firstName' => 'Frederick',
+      'lastName' => 'Pabst',
+      'address' => 'Pabst Blue Ribbon Dr',
+      'city' => 'Milwaukee',
+      'state' => 'WI',
+      'zip' => '53177',
+      'country' => 'US',
+    ], $response->paymentProfile->billTo);
   }
 
 }

@@ -2,13 +2,17 @@
 
 namespace Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway;
 
+use CommerceGuys\AuthNet\DataTypes\CreditCard as AuthnetCreditCard;
+use CommerceGuys\AuthNet\UpdateCustomerPaymentProfileRequest;
 use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\CreditCard;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
+use Drupal\commerce_payment\Exception\DeclineException;
 use Drupal\commerce_payment\Exception\HardDeclineException;
 use Drupal\commerce_payment\Exception\InvalidResponseException;
 use Drupal\commerce_payment\Exception\PaymentGatewayException;
+use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsUpdatingStoredPaymentMethodsInterface;
 use Drupal\commerce_price\Price;
 use CommerceGuys\AuthNet\CreateCustomerPaymentProfileRequest;
 use CommerceGuys\AuthNet\CreateCustomerProfileRequest;
@@ -44,7 +48,7 @@ use CommerceGuys\AuthNet\DataTypes\CardholderAuthentication;
  *   },
  * )
  */
-class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
+class AcceptJs extends OnsiteBase implements SupportsRefundsInterface, SupportsUpdatingStoredPaymentMethodsInterface {
 
   /**
    * {@inheritdoc}
@@ -450,6 +454,39 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface {
         $value['eci'] = $payload->getValue()->Payment->ExtendedData->ECIFlag;
         $this->privateTempStore->get('commerce_authnet')->set($payment_method->id(), $value);
       }
+    }
+  }
+
+  public function updatePaymentMethod(PaymentMethodInterface $payment_method) {
+    $request = new UpdateCustomerPaymentProfileRequest($this->authnetConfiguration, $this->httpClient);
+    $request->setCustomerProfileId($this->getRemoteCustomerId($payment_method->getOwner()));
+    $payment_profile = new PaymentProfile([
+      'customerType' => 'individual',
+    ]);
+    $payment_profile->addCustomerPaymentProfileId($payment_method->getRemoteId());
+    /** @var \Drupal\address\AddressInterface $address */
+    $address = $payment_method->getBillingProfile()->address->first();
+    $bill_to = array_filter([
+      'firstName' => $address->getGivenName(),
+      'lastName' => $address->getFamilyName(),
+      'company' => $address->getOrganization(),
+      'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
+      'country' => $address->getCountryCode(),
+      'city' => $address->getLocality(),
+      'state' => $address->getAdministrativeArea(),
+      'zip' => $address->getPostalCode(),
+    ]);
+    $payment_profile->addBillTo(new BillTo($bill_to));
+    $request->setPaymentProfile($payment_profile);
+    $payment_profile->addPayment(new AuthnetCreditCard([
+      'cardNumber' => 'XXXX' . $payment_method->get('card_number')->value,
+      'expirationDate' => sprintf('%s-%s', $payment_method->get('card_exp_month')->value, $payment_method->get('card_exp_year')->value),
+    ]));
+    $response = $request->execute();
+    if ($response->getResultCode() != 'Ok') {
+      $this->logResponse($response);
+      $error = $response->getMessages()[0];
+      throw new DeclineException('Unable to update the payment method.');
     }
   }
 
