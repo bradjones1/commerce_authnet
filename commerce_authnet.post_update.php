@@ -140,7 +140,11 @@ function commerce_authnet_post_update_verify_client_key() {
     }
   }
 
-  return t('Please provide a client key for %labels. It is required to continue accepting payments.', [
-    '%labels' => implode(', ', $gateways_with_warnings),
-  ]);
+  if (!empty($gateways_with_warnings)) {
+    return t('Please provide a client key for %labels. It is required to continue accepting payments.', [
+      '%labels' => implode(', ', $gateways_with_warnings),
+    ]);
+  }
+
+  return t('All Authorize.net payment gateways which require a client key have it configured.');
 }
