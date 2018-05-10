@@ -162,7 +162,7 @@
 
       $('.accept-js-data-last4', $form).val(last4);
       $('.accept-js-data-month', $form).val(expiration.month);
-      $('.accept-js-data-year', $form).val(expiration.year);
+      $('.accept-js-data-year', $form).val('20' + expiration.year);
       if (settings.ccaStatus == 1) {
         $('.accept-js-data-cca-jwt-response-token', $form).val(responseJwt);
       }
