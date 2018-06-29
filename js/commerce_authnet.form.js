@@ -29,7 +29,7 @@
       }
     },
     detach: function (context) {
-      var $form = $('.authorize-net-accept-js-form').closest('form');
+      var $form = $('.authorize-net-accept-js-form', context).closest('form');
       $form.removeOnce('authorize-net-accept-js-processed');
       $form.off('submit.authnet');
     },
