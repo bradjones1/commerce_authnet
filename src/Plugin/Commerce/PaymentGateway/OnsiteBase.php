@@ -2,6 +2,7 @@
 
 namespace Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway;
 
+use Drupal\commerce_order\AdjustmentTransformerInterface;
 use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
@@ -10,6 +11,7 @@ use Drupal\commerce_payment\Exception\PaymentGatewayException;
 use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
+use Drupal\commerce_price\Calculator;
 use Drupal\commerce_price\Price;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -36,6 +38,13 @@ use Drupal\Core\TempStore\PrivateTempStoreFactory;
  * Provides the Authorize.net payment gateway base class.
  */
 abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePaymentGatewayInterface, SupportsAuthorizationsInterface {
+
+  /**
+   * The adjustmentTransformer service.
+   *
+   * @var \Drupal\commerce_order\AdjustmentTransformerInterface
+   */
+  protected $adjustmentTransformer;
 
   /**
    * The Authorize.net API configuration.
@@ -75,7 +84,7 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time, ClientInterface $client, LoggerInterface $logger, QueryFactory $entity_query_service, PrivateTempStoreFactory $private_tempstore) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time, ClientInterface $client, LoggerInterface $logger, QueryFactory $entity_query_service, PrivateTempStoreFactory $private_tempstore, AdjustmentTransformerInterface $adjustment_transformer) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager, $time);
 
     $this->httpClient = $client;
@@ -88,6 +97,7 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
     ]);
     $this->entityQueryService = $entity_query_service;
     $this->privateTempStore = $private_tempstore;
+    $this->adjustmentTransformer = $adjustment_transformer;
   }
 
   /**
@@ -105,7 +115,8 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
       $container->get('http_client'),
       $container->get('commerce_authnet.logger'),
       $container->get('entity.query'),
-      $container->get('tempstore.private')
+      $container->get('tempstore.private'),
+      $container->get('commerce_order.adjustment_transformer')
     );
   }
 
@@ -348,15 +359,20 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
    *   The total tax.
    */
   protected function getTax(OrderInterface $order) {
-    $amount = 0;
+    $amount = '0';
     $labels = [];
 
-    foreach ($order->collectAdjustments() as $adjustment) {
-      if ($adjustment->getType() !== 'tax') {
-        continue;
+    $adjustments = $order->collectAdjustments();
+    if ($adjustments) {
+      $adjustments = $this->adjustmentTransformer->combineAdjustments($adjustments);
+      $adjustments = $this->adjustmentTransformer->roundAdjustments($adjustments);
+      foreach ($adjustments as $adjustment) {
+        if ($adjustment->getType() !== 'tax') {
+          continue;
+        }
+        $amount = Calculator::add($amount, $adjustment->getAmount()->getNumber());
+        $labels[] = $adjustment->getLabel();
       }
-      $amount += $adjustment->getAmount()->getNumber();
-      $labels[] = $adjustment->getLabel();
     }
 
     // Determine whether multiple tax types are present.
