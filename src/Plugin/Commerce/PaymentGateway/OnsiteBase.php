@@ -2,6 +2,7 @@
 
 namespace Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway;
 
+use CommerceGuys\AuthNet\DataTypes\Shipping;
 use Drupal\commerce_order\AdjustmentTransformerInterface;
 use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
@@ -402,6 +403,62 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
     }
 
     return new Tax([
+      'amount' => $amount,
+      'name' => $name,
+      'description' => $description,
+    ]);
+  }
+
+  /**
+   * Gets the shipping from order.
+   *
+   * @param \Drupal\commerce_order\Entity\OrderInterface $order
+   *   The order.
+   *
+   * @return \CommerceGuys\AuthNet\DataTypes\Shipping
+   *   The total shipping.
+   */
+  protected function getShipping(OrderInterface $order) {
+    // Return empty if there is no shipments field.
+    if (!$order->hasField('shipments')) {
+      return new Shipping([
+        'amount' => 0,
+        'name' => '',
+        'description' => '',
+      ]);
+    }
+
+    $amount = '0';
+    $labels = [];
+
+    /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface[] $shipments */
+    $shipments = $order->get('shipments')->referencedEntities();
+    if ($shipments) {
+      foreach ($shipments as $shipment) {
+        $amount = Calculator::add($amount, $shipment->getAmount()->getNumber());
+        $labels[] = $shipment->label();
+      }
+    }
+
+    // Determine whether multiple tax types are present.
+    $labels = array_unique($labels);
+    if (empty($labels)) {
+      $name = '';
+      $description = '';
+    }
+    elseif (count($labels) > 1) {
+      $name = 'Multiple shipments';
+      $description = implode(', ', $labels);
+    }
+    else {
+      $name = $labels[0];
+      $description = $labels[0];
+    }
+
+    // Limit name, description fields to 32, 255 characters.
+    $name = (strlen($name) > 31) ? substr($name, 0, 28) . '...' : $name;
+    $description = (strlen($description) > 255) ? substr($description, 0, 252) . '...' : $description;
+    return new Shipping([
       'amount' => $amount,
       'name' => $name,
       'description' => $description,
