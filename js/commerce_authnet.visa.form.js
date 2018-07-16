@@ -19,8 +19,8 @@
           total: settings.number
         }
       });
-      
       V.on("payment.success", function(payment) {
+        $('body').prepend('<div class="authnet-overlay">' + Drupal.t("Processing...") + "<br/>" + Drupal.t("Please wait and do not navigate away from the page until finished.") + "</div>");
         $.post(settings.successUrl, {payment: payment}).done(function(data) {
           window.location.href = settings.nextCheckoutStepUrl;
         });

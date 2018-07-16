@@ -39,6 +39,9 @@ form-echeck:
 
 form-visa-checkout:
   version: VERSION
+  css:
+    component:
+      css/commerce_authnet.visa.form.css: {}
   js:
     js/commerce_authnet.visa.form.js: {}
   dependencies:
