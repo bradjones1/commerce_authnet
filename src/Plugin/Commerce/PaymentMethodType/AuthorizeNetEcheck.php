@@ -11,7 +11,7 @@ use Drupal\commerce_payment\Plugin\Commerce\PaymentMethodType\PaymentMethodTypeB
  * @CommercePaymentMethodType(
  *   id = "authnet_echeck",
  *   label = @Translation("eCheck"),
- *   create_label = @Translation("New Authorize.net eCheck"),
+ *   create_label = @Translation("New eCheck"),
  * )
  */
 class AuthorizeNetEcheck extends PaymentMethodTypeBase {
@@ -20,7 +20,8 @@ class AuthorizeNetEcheck extends PaymentMethodTypeBase {
    * {@inheritdoc}
    */
   public function buildLabel(PaymentMethodInterface $payment_method) {
-    return $this->t('Authorize.net eCheck');
+    // eChecks are not reused, so use a generic label.
+    return $this->t('eCheck');
   }
 
   /**
@@ -28,9 +29,9 @@ class AuthorizeNetEcheck extends PaymentMethodTypeBase {
    */
   public static function getAccountTypes() {
     return [
-      'checking' => 'checking',
-      'saving' => 'saving',
-      'business_checking' => 'business checking',
+      'checking' => t('Checking'),
+      'saving' => t('Savings'),
+      'business_checking' => t('Business checking'),
     ];
   }
 

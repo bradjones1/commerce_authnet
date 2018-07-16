@@ -39,6 +39,13 @@ class EcheckAddForm extends BasePaymentMethodAddForm {
       'paymentMethodType' => 'authnet_echeck',
     ];
 
+    // To display validation errors.
+    $element['payment_errors'] = [
+      '#type' => 'markup',
+      '#markup' => '<div id="payment-errors"></div>',
+      '#weight' => -200,
+    ];
+
     $element['routing_number'] = [
       '#type' => 'textfield',
       '#title' => t('Routing number'),
