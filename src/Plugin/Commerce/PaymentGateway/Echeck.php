@@ -115,6 +115,7 @@ class Echeck extends OnsiteBase {
 
     // Adding tax information to the transaction.
     $transaction_request->addData('tax', $this->getTax($order)->toArray());
+    $transaction_request->addData('shipping', $this->getShipping($order)->toArray());
 
     $request = new CreateTransactionRequest($this->authnetConfiguration, $this->httpClient);
     $request->setTransactionRequest($transaction_request);
