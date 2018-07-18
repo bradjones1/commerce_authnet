@@ -50,6 +50,10 @@ class UpgradeConfigTest extends KernelTestBase {
       'client_key' => '',
       'display_label' => 'Authorize.net',
       'payment_method_types' => ['credit_card'],
+      'cca_status' => FALSE,
+      'cca_api_id' => '',
+      'cca_org_unit_id' => '',
+      'cca_api_key' => '',
     ], $gateway_configuration);
   }
 

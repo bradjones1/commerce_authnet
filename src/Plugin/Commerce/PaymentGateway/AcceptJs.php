@@ -53,6 +53,18 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface, SupportsU
   /**
    * {@inheritdoc}
    */
+  public function defaultConfiguration() {
+    return [
+      'cca_status' => FALSE,
+      'cca_api_id' => '',
+      'cca_org_unit_id' => '',
+      'cca_api_key' => '',
+    ] + parent::defaultConfiguration();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildConfigurationForm($form, $form_state);
 
