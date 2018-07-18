@@ -26,6 +26,9 @@ class AcceptJsAddForm extends BasePaymentMethodAddForm {
     else {
       $element['#attached']['library'][] = 'commerce_authnet/accept-js-production';
     }
+    // @todo Remove this line when
+    // https://www.drupal.org/project/commerce/issues/2986599 gets fixed.
+    $element['#attached']['library'][] = 'commerce_authnet/form-accept';
     $element['#attached']['drupalSettings']['commerceAuthorizeNet'] = [
       'clientKey' => $plugin->getConfiguration()['client_key'],
       'apiLoginID' => $plugin->getConfiguration()['api_login'],
