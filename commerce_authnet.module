@@ -15,9 +15,12 @@ function commerce_authnet_form_alter(&$form, FormStateInterface $form_state, $fo
     $build_info = $form_state->getBuildInfo();
     /** @var Drupal\commerce_checkout\Plugin\Commerce\CheckoutFlow\MultistepDefault $checkout_flow */
     $checkout_flow = $build_info['callback_object'];
-    $payment_gateway_plugin_id = $checkout_flow->getOrder()->payment_gateway->entity->getPluginId();
-    if ($payment_gateway_plugin_id === 'authorizenet_visa_checkout') {
-      $form['actions']['next']['#value'] = t('Proceed to next step to finish with Visa Checkout');
+    $order = $checkout_flow->getOrder();
+    if (!$order->payment_gateway->isEmpty()) {
+      $payment_gateway_plugin_id = $order->payment_gateway->entity->getPluginId();
+      if ($payment_gateway_plugin_id === 'authorizenet_visa_checkout') {
+        $form['actions']['next']['#value'] = t('Proceed to next step to finish with Visa Checkout');
+      }
     }
   }
 }
