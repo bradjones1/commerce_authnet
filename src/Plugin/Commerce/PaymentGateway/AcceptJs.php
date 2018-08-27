@@ -284,17 +284,11 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface, SupportsU
         'address' => substr($shipping_address->getAddressLine1() . ' ' . $shipping_address->getAddressLine2(), 0, 60),
         'country' => $shipping_address->getCountryCode(),
         'company' => $shipping_address->getOrganization(),
+        'city' => $shipping_address->getLocality(),
+        'state' => $shipping_address->getAdministrativeArea(),
+        'zip' => $shipping_address->getPostalCode(),
       ];
-      if ($shipping_address->getLocality() != '') {
-        $ship_data['city'] = $shipping_address->getLocality();
-      }
-      if ($shipping_address->getAdministrativeArea() != '') {
-        $ship_data['state'] = $shipping_address->getAdministrativeArea();
-      }
-      if ($shipping_address->getPostalCode() != '') {
-        $ship_data['zip'] = $shipping_address->getPostalCode();
-      }
-      $transaction_request->addDataType(new ShipTo($ship_data));
+      $transaction_request->addDataType(new ShipTo(array_filter($ship_data)));
     }
 
     // Adding order information to the transaction.
