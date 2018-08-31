@@ -24,3 +24,14 @@ function commerce_authnet_form_alter(&$form, FormStateInterface $form_state, $fo
     }
   }
 }
+
+/**
+ * Implements hook_cron().
+ */
+function commerce_authnet_cron() {
+  $verifier = \Drupal::getContainer()->get('commerce_authnet.echeck_transaction_verifier');
+  $payments = $verifier->getPayments();
+  foreach ($payments as $payment) {
+    $verifier->processPayment($payment);
+  }
+}

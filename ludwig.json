@@ -1,7 +1,7 @@
 {
     "require": {
         "commerceguys/authnet": {
-            "version": "v1.0.0-rc4",
+            "version": "v1.1.0",
             "url": "https://github.com/commerceguys/authnet/archive/v1.0.0-rc4.zip"
         }
     }

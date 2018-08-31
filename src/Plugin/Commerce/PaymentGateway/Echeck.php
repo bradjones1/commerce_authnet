@@ -11,6 +11,10 @@ use CommerceGuys\AuthNet\DataTypes\Order as OrderDataType;
 use CommerceGuys\AuthNet\CreateTransactionRequest;
 use Drupal\commerce_payment\Exception\PaymentGatewayException;
 use Drupal\commerce_payment\Exception\HardDeclineException;
+use Drupal\commerce_price\Price;
+use CommerceGuys\AuthNet\GetSettledBatchListRequest;
+use CommerceGuys\AuthNet\GetTransactionListRequest;
+use Drupal\commerce_payment\Entity\Payment;
 
 /**
  * Provides the Authorize.net echeck payment gateway.
@@ -22,6 +26,7 @@ use Drupal\commerce_payment\Exception\HardDeclineException;
  *   forms = {
  *     "add-payment-method" = "Drupal\commerce_authnet\PluginForm\EcheckAddForm",
  *   },
+ *   payment_type = "payment_echeck",
  *   payment_method_types = {"authnet_echeck"},
  * )
  */
@@ -36,11 +41,11 @@ class Echeck extends OnsiteBase {
     $this->assertPaymentMethod($payment_method);
 
     $order = $payment->getOrder();
-    $owner = $payment_method->getOwner();
 
     // Transaction request.
+    // eChecks have a pseudo "authorized" state, so just do AUTH_CAPTURE.
     $transaction_request = new TransactionRequest([
-      'transactionType' => ($capture) ? TransactionRequest::AUTH_CAPTURE : TransactionRequest::AUTH_ONLY,
+      'transactionType' => TransactionRequest::AUTH_CAPTURE,
       'amount' => $payment->getAmount()->getNumber(),
     ]);
 
@@ -62,18 +67,12 @@ class Echeck extends OnsiteBase {
       'company' => $address->getOrganization(),
       'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
       'country' => $address->getCountryCode(),
+      'city' => $address->getLocality(),
+      'state' => $address->getAdministrativeArea(),
+      'zip' => $address->getPostalCode(),
       // @todo support adding phone and fax
     ];
-    if ($address->getLocality() != '') {
-      $bill_to['city'] = $address->getLocality();
-    }
-    if ($address->getAdministrativeArea() != '') {
-      $bill_to['state'] = $address->getAdministrativeArea();
-    }
-    if ($address->getPostalCode() != '') {
-      $bill_to['zip'] = $address->getPostalCode();
-    }
-    $transaction_request->addDataType(new BillTo($bill_to));
+    $transaction_request->addDataType(new BillTo(array_filter($bill_to)));
 
     if (\Drupal::moduleHandler()->moduleExists('commerce_shipping') && $order->hasField('shipments') && !($order->get('shipments')->isEmpty())) {
       /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface[] $shipments */
@@ -133,10 +132,32 @@ class Echeck extends OnsiteBase {
       throw new HardDeclineException($message->getText());
     }
 
-    $next_state = $capture ? 'completed' : 'authorization';
-    $payment->setState($next_state);
+    // Mark the payment as pending as we await for transaction details from
+    // Authorize.net.
+    $payment->setState('pending');
     $payment->setRemoteId($response->transactionResponse->transId);
-    // @todo Find out how long an authorization is valid, set its expiration.
+    $payment->save();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function capturePayment(PaymentInterface $payment, Price $amount = NULL) {
+    // If not specified, capture the entire amount.
+    $amount = $amount ?: $payment->getAmount();
+
+    $this->assertPaymentState($payment, ['pending']);
+    $payment->setState('completed');
+    $payment->setAmount($amount);
+    $payment->save();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function voidPayment(PaymentInterface $payment) {
+    $this->assertPaymentState($payment, ['pending']);
+    $payment->setState('voided');
     $payment->save();
   }
 
@@ -165,6 +186,62 @@ class Echeck extends OnsiteBase {
     $payment_method->setExpiresTime($expires);
 
     $payment_method->save();
+  }
+
+  /**
+   * Get settled transactions from authorize.net.
+   *
+   * @param string $from_date
+   *   The settlement starting date in Y-m-d\TH:i:s format.
+   * @param string $to_date
+   *   The settlement end date in Y-m-d\TH:i:s format.
+   *
+   * @return \Drupal\commerce_payment\Entity\PaymentInterface[]
+   *   An array of payments keyed by the entity id.
+   */
+  public function getSettledTransactions($from_date, $to_date) {
+    $request = new GetSettledBatchListRequest($this->authnetConfiguration, $this->httpClient, FALSE, $from_date, $to_date);
+    $batch_response = $request->execute();
+    $batch_ids = [];
+    if ($batch_response->getResultCode() === 'Ok') {
+      if (is_object($batch_response->contents()->batchList->batch)) {
+        if ($batch_response->contents()->batchList->batch->paymentMethod === 'eCheck') {
+          if ($batch_response->contents()->batchList->batch->settlementState === 'settledSuccessfully') {
+            $batch_ids[] = $batch_response->contents()->batchList->batch->batchId;
+          }
+        }
+      }
+      else {
+        foreach ($batch_response->contents()->batchList->batch as $batch) {
+          if ($batch->paymentMethod === 'eCheck') {
+            if ($batch->settlementState === 'settledSuccessfully') {
+              $batch_ids[] = $batch->batchId;
+            }
+          }
+        }
+      }
+    }
+    $remote_ids = [];
+    foreach ($batch_ids as $batch_id) {
+      $request = new GetTransactionListRequest($this->authnetConfiguration, $this->httpClient, $batch_id);
+      $transaction_list_response = $request->execute();
+      if ($transaction_list_response->contents()->totalNumInResultSet == 1) {
+        $remote_ids[] = $transaction_list_response->contents()->transactions->transaction->transId;
+      }
+      else {
+        foreach ($transaction_list_response->contents()->transactions->transaction as $transaction) {
+          $remote_ids[] = $transaction->transId;
+        }
+      }
+    }
+    $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
+    $query = $payment_storage->getQuery();
+    $payment_ids = $query->condition('type', 'payment_echeck')
+      ->condition('state', 'pending')
+      ->condition('remote_id', $remote_ids)
+      ->execute();
+
+    return Payment::loadMultiple($payment_ids);
   }
 
 }

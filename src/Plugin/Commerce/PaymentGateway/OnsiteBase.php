@@ -163,8 +163,8 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
       $url = Url::fromRoute('entity.commerce_checkout_flow.collection');
       $form['transaction_type'] = [
         '#markup' => $this->t('<p>To configure the transaction settings, modify the <em>Payment process</em> pane in your checkout flow. From there you can choose authorization only or authorization and capture. You can manage your checkout flows here: <a href=":url">:url</a></p>', [
-          ':url' => $url->toString(),
-        ]),
+          ':url' => $url->toString()]) .
+          $this->t('<p>For Echeck to work Transaction Details API needs to be enabled in your merchant account ("Account" => "Transaction Details API").</p>'),
       ];
     }
     catch (\Exception $e) {
