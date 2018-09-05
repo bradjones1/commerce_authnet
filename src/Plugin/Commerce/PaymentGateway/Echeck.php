@@ -26,11 +26,11 @@ use Drupal\commerce_payment\Entity\Payment;
  *   forms = {
  *     "add-payment-method" = "Drupal\commerce_authnet\PluginForm\EcheckAddForm",
  *   },
- *   payment_type = "payment_echeck",
+ *   payment_type = "payment_manual",
  *   payment_method_types = {"authnet_echeck"},
  * )
  */
-class Echeck extends OnsiteBase {
+class Echeck extends OnsiteBase implements EcheckInterface {
 
   /**
    * {@inheritdoc}
@@ -189,15 +189,7 @@ class Echeck extends OnsiteBase {
   }
 
   /**
-   * Get settled transactions from authorize.net.
-   *
-   * @param string $from_date
-   *   The settlement starting date in Y-m-d\TH:i:s format.
-   * @param string $to_date
-   *   The settlement end date in Y-m-d\TH:i:s format.
-   *
-   * @return \Drupal\commerce_payment\Entity\PaymentInterface[]
-   *   An array of payments keyed by the entity id.
+   * {@inheritdoc}
    */
   public function getSettledTransactions($from_date, $to_date) {
     $request = new GetSettledBatchListRequest($this->authnetConfiguration, $this->httpClient, FALSE, $from_date, $to_date);
@@ -236,8 +228,7 @@ class Echeck extends OnsiteBase {
     }
     $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
     $query = $payment_storage->getQuery();
-    $payment_ids = $query->condition('type', 'payment_echeck')
-      ->condition('state', 'pending')
+    $payment_ids = $query->condition('state', 'pending')
       ->condition('remote_id', $remote_ids)
       ->execute();
 

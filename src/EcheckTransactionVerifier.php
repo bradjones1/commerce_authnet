@@ -7,6 +7,7 @@ use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Psr\Log\LoggerInterface;
 use Drupal\Component\Datetime\TimeInterface;
+use Drupal\commerce_payment\Entity\PaymentGateway;
 
 /**
  * Verify echeck transaction states.
@@ -52,45 +53,44 @@ class EcheckTransactionVerifier implements PaymentProcessorInterface {
    * {@inheritdoc}
    */
   public function getPayments() {
-    // Get all echeck payment gateways corresponding to pending echeck
-    // payments.
-    $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
-    $query = $payment_storage->getQuery();
-    $payment_ids = $query->condition('type', 'payment_echeck')
-      ->condition('state', 'pending')
+    $payment_gateway_storage = $this->entityTypeManager->getStorage('commerce_payment_gateway');
+    $payment_gateway_ids = $payment_gateway_storage->getQuery()
+      ->condition('plugin', 'authorizenet_echeck')
       ->execute();
-    /** @var \Drupal\commerce_payment\Entity\PaymentInterface[] $payments */
-    $payments = $payment_storage->loadMultiple($payment_ids);
-    $gateway_plugins = [];
-    foreach ($payments as $payment) {
-      if ($payment->getPaymentGateway()->getPluginId() === 'authorizenet_echeck' && empty($gateway_plugins[$payment->getPaymentGatewayId()])) {
-        $gateway_plugins[$payment->getPaymentGatewayId()] = $payment->getPaymentGateway()->getPlugin();
-      }
+    if (empty($payment_gateway_ids)) {
+      return [];
+    }
+
+    /** @var \Drupal\commerce_payment\Entity\PaymentGatewayInterface[] $payment_gateways */
+    $payment_gateways = $payment_gateway_storage->loadMultiple($payment_gateway_ids);
+    $payment_gateway_plugins = [];
+    foreach ($payment_gateways as $payment_gateway) {
+      $payment_gateway_plugins[$payment_gateway->getPluginId()] = $payment_gateway->getPlugin();
     }
 
     // Get settled transactions.
-    $return = [];
+    $payments = [];
     $now = date('Y-m-d\TH:i:s', $this->time->getCurrentTime());
     $two_days_ago = date('Y-m-d\TH:i:s', $this->time->getCurrentTime() - 480 * 3600);
-    /** @var Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\Echeck $plugin */
-    foreach ($gateway_plugins as $plugin) {
-      $return += $plugin->getSettledTransactions($two_days_ago, $now);
+    /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\EcheckInterface $plugin */
+    foreach ($payment_gateway_plugins as $plugin) {
+      $payments += $plugin->getSettledTransactions($two_days_ago, $now);
     }
-    return $return;
+
+    return $payments;
   }
 
   /**
    * {@inheritdoc}
    */
   public function processPayment(PaymentInterface $payment) {
-    $gateway_plugin = $payment->getPaymentGateway()->getPlugin();
-
-    if (!$gateway_plugin instanceof Echeck) {
-      // This should never happen, but just in case.
+    $payment_gateway_plugin = $payment->getPaymentGateway()->getPlugin();
+    if (!$payment_gateway_plugin instanceof Echeck) {
       return NULL;
     }
+
     if ($payment->getState() !== 'completed') {
-      $gateway_plugin->capturePayment($payment);
+      $payment_gateway_plugin->capturePayment($payment);
     }
   }
 
