@@ -111,12 +111,12 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
     $this->getSession()->getPage()->clickLink('Add payment gateway');
     $this->assertSession()->addressEquals('admin/commerce/config/payment-gateways/add');
     $this->saveHtmlOutput();
-    $radio_button = $this->getSession()->getPage()->findField('Authorize.net Visa Checkout');
+    $radio_button = $this->getSession()->getPage()->findField('Authorize.net (Visa Checkout)');
     $radio_button->click();
     $this->waitForAjaxToFinish();
     $values = [
       'id' => 'authorizenet_visa_checkout',
-      'label' => 'Authorize.net Visa Checkout',
+      'label' => 'Authorize.net (Visa Checkout)',
       'plugin' => 'authorizenet_visa_checkout',
       'configuration[authorizenet_visa_checkout][api_login]' => '64EZ77a2w8',
       'configuration[authorizenet_visa_checkout][transaction_key]' => '2rrbVvBR6949En2d',
@@ -126,7 +126,7 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
       'status' => 1,
     ];
     $this->submitForm($values, 'Save');
-    $this->assertSession()->pageTextContains('Saved the Authorize.net Visa Checkout payment gateway.');
+    $this->assertSession()->pageTextContains('Saved the Authorize.net (Visa Checkout) payment gateway.');
     $payment_gateway = PaymentGateway::load('authorizenet_visa_checkout');
     $this->assertEquals('authorizenet_visa_checkout', $payment_gateway->id());
     $this->assertEquals('Authorize.net Visa Checkout', $payment_gateway->label());
