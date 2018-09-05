@@ -30,8 +30,8 @@ use CommerceGuys\AuthNet\DecryptPaymentDataRequest;
  *
  * @CommercePaymentGateway(
  *   id = "authorizenet_visa_checkout",
- *   label = "Authorize.net Visa Checkout",
- *   display_label = "Authorize.net Visa Checkout",
+ *   label = "Authorize.net (Visa Checkout)",
+ *   display_label = "Authorize.net (Visa Checkout)",
  *   forms = {
  *     "offsite-payment" = "Drupal\commerce_authnet\PluginForm\VisaCheckoutForm",
  *   },
