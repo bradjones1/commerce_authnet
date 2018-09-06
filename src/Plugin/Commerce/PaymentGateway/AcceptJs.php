@@ -230,8 +230,10 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface, SupportsU
     $tempstore_3ds = $this->privateTempStore->get('commerce_authnet')->get($payment_method->id());
     if (!empty($tempstore_3ds)) {
       // Do not send ECI and CAVV values when reusing a payment method.
-      $payment_method_has_been_used = $this->entityQueryService->get('commerce_payment')
+      $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
+      $payment_method_has_been_used = $payment_storage->getQuery()
         ->condition('payment_method', $payment_method->id())
+        ->range(0, 1)
         ->execute();
       if (!$payment_method_has_been_used) {
         $cardholder_authentication = new CardholderAuthentication();
