@@ -129,7 +129,7 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
     $this->assertSession()->pageTextContains('Saved the Authorize.net (Visa Checkout) payment gateway.');
     $payment_gateway = PaymentGateway::load('authorizenet_visa_checkout');
     $this->assertEquals('authorizenet_visa_checkout', $payment_gateway->id());
-    $this->assertEquals('Authorize.net Visa Checkout', $payment_gateway->label());
+    $this->assertEquals('Authorize.net (Visa Checkout)', $payment_gateway->label());
     $this->assertEquals('authorizenet_visa_checkout', $payment_gateway->getPluginId());
     $this->assertEquals(TRUE, $payment_gateway->status());
     $payment_gateway_plugin = $payment_gateway->getPlugin();
