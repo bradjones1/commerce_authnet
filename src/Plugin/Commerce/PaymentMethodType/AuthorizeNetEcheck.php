@@ -11,7 +11,7 @@ use Drupal\commerce_payment\Plugin\Commerce\PaymentMethodType\PaymentMethodTypeB
  * @CommercePaymentMethodType(
  *   id = "authnet_echeck",
  *   label = @Translation("eCheck"),
- *   create_label = @Translation("New eCheck"),
+ *   create_label = @Translation("eCheck"),
  * )
  */
 class AuthorizeNetEcheck extends PaymentMethodTypeBase {
