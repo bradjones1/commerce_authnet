@@ -14,7 +14,6 @@ use Drupal\commerce_payment\Exception\HardDeclineException;
 use Drupal\commerce_price\Price;
 use CommerceGuys\AuthNet\GetSettledBatchListRequest;
 use CommerceGuys\AuthNet\GetTransactionListRequest;
-use Drupal\commerce_payment\Entity\Payment;
 
 /**
  * Provides the Authorize.net echeck payment gateway.
@@ -226,13 +225,20 @@ class Echeck extends OnsiteBase implements EcheckInterface {
         }
       }
     }
-    $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
-    $query = $payment_storage->getQuery();
-    $payment_ids = $query->condition('state', 'pending')
-      ->condition('remote_id', $remote_ids)
-      ->execute();
 
-    return Payment::loadMultiple($payment_ids);
+    $payments = [];
+    if ($remote_ids) {
+      $payment_storage = $this->entityTypeManager->getStorage('commerce_payment');
+      $payment_ids = $payment_storage->getQuery()
+        ->condition('state', 'pending')
+        ->condition('remote_id', $remote_ids)
+        ->execute();
+      if ($payment_ids) {
+        $payments = $payment_storage->loadMultiple($payment_ids);
+      }
+    }
+
+    return $payments;
   }
 
 }
