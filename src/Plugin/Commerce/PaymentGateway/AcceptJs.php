@@ -12,12 +12,13 @@ use Drupal\commerce_payment\Exception\DeclineException;
 use Drupal\commerce_payment\Exception\HardDeclineException;
 use Drupal\commerce_payment\Exception\InvalidResponseException;
 use Drupal\commerce_payment\Exception\PaymentGatewayException;
-use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsUpdatingStoredPaymentMethodsInterface;
 use Drupal\commerce_price\Price;
 use CommerceGuys\AuthNet\CreateCustomerPaymentProfileRequest;
 use CommerceGuys\AuthNet\CreateCustomerProfileRequest;
 use CommerceGuys\AuthNet\CreateTransactionRequest;
+use CommerceGuys\AuthNet\UpdateHeldTransactionRequest;
 use CommerceGuys\AuthNet\DataTypes\BillTo;
+use CommerceGuys\AuthNet\DataTypes\CardholderAuthentication;
 use CommerceGuys\AuthNet\DataTypes\CreditCard as CreditCardDataType;
 use CommerceGuys\AuthNet\DataTypes\LineItem;
 use CommerceGuys\AuthNet\DataTypes\Order as OrderDataType;
@@ -25,12 +26,10 @@ use CommerceGuys\AuthNet\DataTypes\OpaqueData;
 use CommerceGuys\AuthNet\DataTypes\PaymentProfile;
 use CommerceGuys\AuthNet\DataTypes\Profile;
 use CommerceGuys\AuthNet\DataTypes\TransactionRequest;
-use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsRefundsInterface;
 use CommerceGuys\AuthNet\DataTypes\ShipTo;
 use Drupal\Core\Form\FormStateInterface;
 use Lcobucci\JWT\Parser;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
-use CommerceGuys\AuthNet\DataTypes\CardholderAuthentication;
 
 /**
  * Provides the Accept.js payment gateway.
@@ -40,15 +39,18 @@ use CommerceGuys\AuthNet\DataTypes\CardholderAuthentication;
  *   label = "Authorize.net (Accept.js)",
  *   display_label = "Authorize.net",
  *   forms = {
- *     "add-payment-method" = "Drupal\commerce_authnet\PluginForm\AcceptJsAddForm",
+ *     "add-payment-method" = "Drupal\commerce_authnet\PluginForm\AcceptJs\PaymentMethodAddForm",
+ *     "approve-payment" = "Drupal\commerce_authnet\PluginForm\AcceptJs\PaymentApproveForm",
+ *     "decline-payment" = "Drupal\commerce_authnet\PluginForm\AcceptJs\PaymentDeclineForm",
  *   },
+ *   payment_type = "acceptjs",
  *   payment_method_types = {"credit_card"},
  *   credit_card_types = {
  *     "amex", "dinersclub", "discover", "jcb", "mastercard", "visa"
  *   },
  * )
  */
-class AcceptJs extends OnsiteBase implements SupportsRefundsInterface, SupportsUpdatingStoredPaymentMethodsInterface {
+class AcceptJs extends OnsiteBase implements AcceptJsInterface {
 
   /**
    * {@inheritdoc}
@@ -335,10 +337,79 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface, SupportsU
       throw new HardDeclineException($message->getText());
     }
 
-    $next_state = $capture ? 'completed' : 'authorization';
+    // Select the next state based on fraud detection results.
+    $code = $response->getMessageCode();
+    $expires = 0;
+    $next_state = 'authorization';
+    if ($code == 1 && $capture) {
+      $next_state = 'completed';
+    }
+    // Do not authorize, but hold for review.
+    elseif ($code == 252) {
+      $next_state = 'unauthorized_review';
+      $expires = strtotime('+5 days');
+    }
+    // Authorized, but hold for review.
+    elseif ($code == 253) {
+      $next_state = 'authorization_review';
+      $expires = strtotime('+5 days');
+    }
+    $payment->setExpiresTime($expires);
     $payment->setState($next_state);
     $payment->setRemoteId($response->transactionResponse->transId);
     // @todo Find out how long an authorization is valid, set its expiration.
+    $payment->save();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function approvePayment(PaymentInterface $payment) {
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
+    $this->assertPaymentState($payment, ['unauthorized_review', 'authorization_review']);
+    if ($payment->isExpired()) {
+      throw new HardDeclineException('This payment has expired.');
+    }
+
+    $request = new UpdateHeldTransactionRequest($this->authnetConfiguration, $this->httpClient);
+    $request->setAction(UpdateHeldTransactionRequest::APPROVE);
+    $request->setRefTransId($payment->getRemoteId());
+    $response = $request->execute();
+
+    if ($response->getResultCode() != 'Ok') {
+      $this->logResponse($response);
+      $message = $response->getMessages()[0];
+      throw new PaymentGatewayException($message->getText());
+    }
+
+    $new_state = $payment->getState()->value == 'unauthorized_review' ? 'authorization' : 'completed';
+    $payment->setState($new_state);
+    $payment->save();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function declinePayment(PaymentInterface $payment) {
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethod $payment_method */
+    $this->assertPaymentState($payment, ['unauthorized_review', 'authorization_review']);
+    if ($payment->isExpired()) {
+      throw new HardDeclineException('This payment has expired.');
+    }
+
+    $request = new UpdateHeldTransactionRequest($this->authnetConfiguration, $this->httpClient);
+    $request->setAction(UpdateHeldTransactionRequest::DECLINE);
+    $request->setRefTransId($payment->getRemoteId());
+    $response = $request->execute();
+
+    if ($response->getResultCode() != 'Ok') {
+      $this->logResponse($response);
+      $message = $response->getMessages()[0];
+      throw new PaymentGatewayException($message->getText());
+    }
+
+    $new_state = $payment->getState()->value == 'unauthorized_review' ? 'unauthorized_declined' : 'authorization_declined';
+    $payment->setState($new_state);
     $payment->save();
   }
 
@@ -466,6 +537,9 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface, SupportsU
     }
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function updatePaymentMethod(PaymentMethodInterface $payment_method) {
     $request = new UpdateCustomerPaymentProfileRequest($this->authnetConfiguration, $this->httpClient);
     $request->setCustomerProfileId($this->getRemoteCustomerId($payment_method->getOwner()));
@@ -745,6 +819,28 @@ class AcceptJs extends OnsiteBase implements SupportsRefundsInterface, SupportsU
     }
 
     return $line_items;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function buildPaymentOperations(PaymentInterface $payment) {
+    $payment_state = $payment->getState()->value;
+    $operations = parent::buildPaymentOperations($payment);
+    $operations['approve'] = [
+      'title' => $this->t('Approve'),
+      'page_title' => $this->t('Approve payment'),
+      'plugin_form' => 'approve-payment',
+      'access' => in_array($payment_state, ['unauthorized_review', 'authorization_review']),
+    ];
+    $operations['decline'] = [
+      'title' => $this->t('Decline'),
+      'page_title' => $this->t('Decline payment'),
+      'plugin_form' => 'decline-payment',
+      'access' => in_array($payment_state, ['unauthorized_review', 'authorization_review']),
+    ];
+
+    return $operations;
   }
 
 }

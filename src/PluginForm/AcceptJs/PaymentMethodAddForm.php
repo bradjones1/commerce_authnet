@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\commerce_authnet\PluginForm;
+namespace Drupal\commerce_authnet\PluginForm\AcceptJs;
 
 use Drupal\commerce_payment\PluginForm\PaymentMethodAddForm as BasePaymentMethodAddForm;
 use Drupal\Core\Form\FormStateInterface;
@@ -9,7 +9,7 @@ use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_price\Calculator;
 
-class AcceptJsAddForm extends BasePaymentMethodAddForm {
+class PaymentMethodAddForm extends BasePaymentMethodAddForm {
 
   /**
    * {@inheritdoc}
