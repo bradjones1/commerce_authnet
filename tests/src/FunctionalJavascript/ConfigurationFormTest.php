@@ -3,17 +3,15 @@
 namespace Drupal\Tests\commerce_authnet\FunctionalJavascript;
 
 use Drupal\commerce_payment\Entity\PaymentGateway;
-use Drupal\Tests\commerce\Functional\CommerceBrowserTestBase;
-use Drupal\Tests\commerce\FunctionalJavascript\JavascriptTestTrait;
+use Drupal\Tests\commerce\FunctionalJavascript\CommerceWebDriverTestBase;
+use WebDriver\Exception\ElementNotVisible;
 
 /**
  * Tests the Authorize.net payment configuration form.
  *
  * @group commerce_authnet
  */
-class ConfigurationFormTest extends CommerceBrowserTestBase {
-
-  use JavascriptTestTrait;
+class ConfigurationFormTest extends CommerceWebDriverTestBase {
 
   /**
    * {@inheritdoc}
@@ -27,6 +25,7 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
    */
   protected function getAdministratorPermissions() {
     return array_merge([
+      'access content',
       'administer commerce_payment_gateway',
     ], parent::getAdministratorPermissions());
   }
@@ -41,21 +40,22 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
     $this->saveHtmlOutput();
     $radio_button = $this->getSession()->getPage()->findField('Authorize.net (Accept.js)');
     $radio_button->click();
-    $this->waitForAjaxToFinish();
+    $this->assertSession()->assertWaitOnAjaxRequest();
+    // Populate the label / machine name first.
+    $this->getSession()->getPage()->fillField('label', 'Authorize.net AcceptJS');
+    $this->assertJsCondition('jQuery("#edit-label-machine-name-suffix .machine-name-value").html() !== ""');
     $values = [
-      'id' => 'authorizenet_acceptjs',
-      'label' => 'Authorize.net AcceptJS',
       'plugin' => 'authorizenet_acceptjs',
       'configuration[authorizenet_acceptjs][api_login]' => '64EZ77a2w8',
       'configuration[authorizenet_acceptjs][transaction_key]' => '2rrbVvBR6949En2d',
       'configuration[authorizenet_acceptjs][client_key]' => '2fejMFQEzA2cg6C5wV3Kz398S94XkPbS56RU2Zq2tfjcmDhDVp8h8XmZ49JQLbY6',
       'configuration[authorizenet_acceptjs][mode]' => 'test',
-      'status' => 1,
+      'status' => TRUE,
     ];
-    $this->submitForm($values, 'Save');
+    $this->submitForm($values, 'Save', 'commerce-payment-gateway-add-form');
     $this->assertSession()->pageTextContains('Saved the Authorize.net AcceptJS payment gateway.');
-    $payment_gateway = PaymentGateway::load('authorizenet_acceptjs');
-    $this->assertEquals('authorizenet_acceptjs', $payment_gateway->id());
+    $payment_gateway = PaymentGateway::load('authorize_net_acceptjs');
+    $this->assertEquals('authorize_net_acceptjs', $payment_gateway->id());
     $this->assertEquals('Authorize.net AcceptJS', $payment_gateway->label());
     $this->assertEquals('authorizenet_acceptjs', $payment_gateway->getPluginId());
     $this->assertEquals(TRUE, $payment_gateway->status());
@@ -78,9 +78,10 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
     $radio_button = $this->getSession()->getPage()->findField('Authorize.net (Echeck)');
     $radio_button->click();
     $this->waitForAjaxToFinish();
+    // Populate the label / machine name first.
+    $this->getSession()->getPage()->fillField('label', 'Authorize.net Echeck');
+    $this->assertJsCondition('jQuery("#edit-label-machine-name-suffix .machine-name-value").html() !== ""');
     $values = [
-      'id' => 'authorizenet_echeck',
-      'label' => 'Authorize.net Echeck',
       'plugin' => 'authorizenet_echeck',
       'configuration[authorizenet_echeck][api_login]' => '64EZ77a2w8',
       'configuration[authorizenet_echeck][transaction_key]' => '2rrbVvBR6949En2d',
@@ -90,8 +91,8 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
     ];
     $this->submitForm($values, 'Save');
     $this->assertSession()->pageTextContains('Saved the Authorize.net Echeck payment gateway.');
-    $payment_gateway = PaymentGateway::load('authorizenet_echeck');
-    $this->assertEquals('authorizenet_echeck', $payment_gateway->id());
+    $payment_gateway = PaymentGateway::load('authorize_net_echeck');
+    $this->assertEquals('authorize_net_echeck', $payment_gateway->id());
     $this->assertEquals('Authorize.net Echeck', $payment_gateway->label());
     $this->assertEquals('authorizenet_echeck', $payment_gateway->getPluginId());
     $this->assertEquals(TRUE, $payment_gateway->status());
@@ -114,9 +115,10 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
     $radio_button = $this->getSession()->getPage()->findField('Authorize.net (Visa Checkout)');
     $radio_button->click();
     $this->waitForAjaxToFinish();
+    // Populate the label / machine name first.
+    $this->getSession()->getPage()->fillField('label', 'Authorize.net Visa Checkout');
+    $this->assertJsCondition('jQuery("#edit-label-machine-name-suffix .machine-name-value").html() !== ""');
     $values = [
-      'id' => 'authorizenet_visa_checkout',
-      'label' => 'Authorize.net (Visa Checkout)',
       'plugin' => 'authorizenet_visa_checkout',
       'configuration[authorizenet_visa_checkout][api_login]' => '64EZ77a2w8',
       'configuration[authorizenet_visa_checkout][transaction_key]' => '2rrbVvBR6949En2d',
@@ -126,10 +128,10 @@ class ConfigurationFormTest extends CommerceBrowserTestBase {
       'status' => 1,
     ];
     $this->submitForm($values, 'Save');
-    $this->assertSession()->pageTextContains('Saved the Authorize.net (Visa Checkout) payment gateway.');
-    $payment_gateway = PaymentGateway::load('authorizenet_visa_checkout');
-    $this->assertEquals('authorizenet_visa_checkout', $payment_gateway->id());
-    $this->assertEquals('Authorize.net (Visa Checkout)', $payment_gateway->label());
+    $this->assertSession()->pageTextContains('Saved the Authorize.net Visa Checkout payment gateway.');
+    $payment_gateway = PaymentGateway::load('authorize_net_visa_checkout');
+    $this->assertEquals('authorize_net_visa_checkout', $payment_gateway->id());
+    $this->assertEquals('Authorize.net Visa Checkout', $payment_gateway->label());
     $this->assertEquals('authorizenet_visa_checkout', $payment_gateway->getPluginId());
     $this->assertEquals(TRUE, $payment_gateway->status());
     $payment_gateway_plugin = $payment_gateway->getPlugin();

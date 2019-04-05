@@ -5,17 +5,14 @@ namespace Drupal\Tests\commerce_authnet\FunctionalJavascript;
 use Drupal\commerce_payment\Entity\PaymentGateway;
 use Drupal\commerce_store\StoreCreationTrait;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
-use Drupal\Tests\commerce\Functional\CommerceBrowserTestBase;
-use Drupal\Tests\commerce\FunctionalJavascript\JavascriptTestTrait;
+use Drupal\Tests\commerce\FunctionalJavascript\CommerceWebDriverTestBase;
 
 /**
  * Tests the Authorize.net payment configurationf orm.
  *
  * @group commerce_authnet
  */
-class CheckoutTest extends CommerceBrowserTestBase {
-
-  use JavascriptTestTrait, StoreCreationTrait;
+class CheckoutTest extends CommerceWebDriverTestBase {
 
   /**
    * The current user.
@@ -42,22 +39,6 @@ class CheckoutTest extends CommerceBrowserTestBase {
     'commerce_payment', 'commerce_checkout', 'commerce_order', 'views_ui',
     'commerce_authnet',
   ];
-
-  /**
-   * {@inheritdoc}
-   *
-   * Force HTTPs for checkout. And automatically catch the exception if it fails
-   * so we can mark the rest as skipped.
-   */
-  protected function drupalGet($path, array $options = [], array $headers = []) {
-    try {
-      $options['https'] = TRUE;
-      return parent::drupalGet($path, $options, $headers);
-    }
-    catch (\Exception $e) {
-      $this->markTestSkipped('Unable to access page over HTTPS');
-    }
-  }
 
   /**
    * {@inheritdoc}
