@@ -11,8 +11,8 @@
         }
     },
     "require": {
-        "drupal/core" : "~8.5",
-        "drupal/commerce": "~2.0",
+        "drupal/core" : "^8.5",
+        "drupal/commerce": "2.x-dev",
         "commerceguys/authnet": "^1.1.1",
         "lcobucci/jwt": "~3.1"
     }

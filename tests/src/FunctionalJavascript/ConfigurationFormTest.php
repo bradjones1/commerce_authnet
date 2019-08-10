@@ -89,7 +89,7 @@ class ConfigurationFormTest extends CommerceWebDriverTestBase {
       'configuration[authorizenet_echeck][mode]' => 'test',
       'status' => 1,
     ];
-    $this->submitForm($values, 'Save');
+    $this->submitForm($values, 'Save', 'commerce-payment-gateway-add-form');
     $this->assertSession()->pageTextContains('Saved the Authorize.net Echeck payment gateway.');
     $payment_gateway = PaymentGateway::load('authorize_net_echeck');
     $this->assertEquals('authorize_net_echeck', $payment_gateway->id());
@@ -127,7 +127,7 @@ class ConfigurationFormTest extends CommerceWebDriverTestBase {
       'configuration[authorizenet_visa_checkout][mode]' => 'test',
       'status' => 1,
     ];
-    $this->submitForm($values, 'Save');
+    $this->submitForm($values, 'Save', 'commerce-payment-gateway-add-form');
     $this->assertSession()->pageTextContains('Saved the Authorize.net Visa Checkout payment gateway.');
     $payment_gateway = PaymentGateway::load('authorize_net_visa_checkout');
     $this->assertEquals('authorize_net_visa_checkout', $payment_gateway->id());

@@ -54,6 +54,7 @@ class UpgradeConfigTest extends KernelTestBase {
       'cca_api_id' => '',
       'cca_org_unit_id' => '',
       'cca_api_key' => '',
+      'collect_billing_information' => TRUE,
     ], $gateway_configuration);
   }
 

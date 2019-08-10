@@ -2,14 +2,59 @@
 
 namespace Drupal\commerce_authnet\PluginForm\AcceptJs;
 
+use Drupal\commerce\InlineFormManager;
 use Drupal\commerce_payment\PluginForm\PaymentMethodAddForm as BasePaymentMethodAddForm;
+use Drupal\commerce_store\CurrentStoreInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
 use Lcobucci\JWT\Builder;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_price\Calculator;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class PaymentMethodAddForm extends BasePaymentMethodAddForm {
+
+  /**
+   * The route match.
+   *
+   * @var \Drupal\Core\Routing\RouteMatchInterface
+   */
+  protected $routeMatch;
+
+  /**
+   * Constructs a new PaymentMethodFormBase.
+   *
+   * @param \Drupal\commerce_store\CurrentStoreInterface $current_store
+   *   The current store.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
+   * @param \Drupal\commerce\InlineFormManager $inline_form_manager
+   *   The inline form manager.
+   * @param \Psr\Log\LoggerInterface $logger
+   *   The logger.
+   * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
+   *   The route match.
+   */
+  public function __construct(CurrentStoreInterface $current_store, EntityTypeManagerInterface $entity_type_manager, InlineFormManager $inline_form_manager, LoggerInterface $logger, RouteMatchInterface $route_match) {
+    parent::__construct($current_store, $entity_type_manager, $inline_form_manager, $logger);
+    $this->routeMatch = $route_match;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('commerce_store.current_store'),
+      $container->get('entity_type.manager'),
+      $container->get('plugin.manager.commerce_inline_form'),
+      $container->get('logger.channel.commerce_payment'),
+      $container->get('current_route_match')
+    );
+  }
 
   /**
    * {@inheritdoc}
