@@ -27,6 +27,7 @@ use CommerceGuys\AuthNet\GetTransactionListRequest;
  *   },
  *   payment_type = "payment_manual",
  *   payment_method_types = {"authnet_echeck"},
+ *   requires_billing_information = FALSE,
  * )
  */
 class Echeck extends OnsiteBase implements EcheckInterface {
@@ -57,21 +58,23 @@ class Echeck extends OnsiteBase implements EcheckInterface {
     ];
     $transaction_request->addData('payment', $payment_data);
 
-    /** @var \Drupal\address\AddressInterface $address */
-    $address = $payment_method->getBillingProfile()->address->first();
-    $bill_to = [
-      // @todo how to allow customizing this.
-      'firstName' => $address->getGivenName(),
-      'lastName' => $address->getFamilyName(),
-      'company' => $address->getOrganization(),
-      'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
-      'country' => $address->getCountryCode(),
-      'city' => $address->getLocality(),
-      'state' => $address->getAdministrativeArea(),
-      'zip' => $address->getPostalCode(),
-      // @todo support adding phone and fax
-    ];
-    $transaction_request->addDataType(new BillTo(array_filter($bill_to)));
+    if ($billing_profile = $payment_method->getBillingProfile()) {
+      /** @var \Drupal\address\AddressInterface $address */
+      $address = $billing_profile->get('address')->first();
+      $bill_to = [
+        // @todo how to allow customizing this.
+        'firstName' => $address->getGivenName(),
+        'lastName' => $address->getFamilyName(),
+        'company' => $address->getOrganization(),
+        'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
+        'country' => $address->getCountryCode(),
+        'city' => $address->getLocality(),
+        'state' => $address->getAdministrativeArea(),
+        'zip' => $address->getPostalCode(),
+        // @todo support adding phone and fax
+      ];
+      $transaction_request->addDataType(new BillTo(array_filter($bill_to)));
+    }
 
     if (\Drupal::moduleHandler()->moduleExists('commerce_shipping') && $order->hasField('shipments') && !($order->get('shipments')->isEmpty())) {
       /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface[] $shipments */

@@ -39,6 +39,7 @@ use CommerceGuys\AuthNet\DecryptPaymentDataRequest;
  *   credit_card_types = {
  *     "amex", "discover", "mastercard", "visa",
  *   },
+ *   requires_billing_information = FALSE,
  * )
  */
 class VisaCheckout extends OffsitePaymentGatewayBase {

@@ -48,6 +48,7 @@ use Lcobucci\JWT\Signer\Hmac\Sha256;
  *   credit_card_types = {
  *     "amex", "dinersclub", "discover", "jcb", "mastercard", "visa"
  *   },
+ *   requires_billing_information = FALSE,
  * )
  */
 class AcceptJs extends OnsiteBase implements AcceptJsInterface {
@@ -431,22 +432,24 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
       'refTransId' => $payment->getRemoteId(),
     ]);
 
-    // Add customer Billing information to satisfy AVS.
-    /** @var \Drupal\address\AddressInterface $address */
-    $address = $payment_method->getBillingProfile()->address->first();
-    $bill_to = array_filter([
-      // @todo how to allow customizing this.
-      'firstName' => $address->getGivenName(),
-      'lastName' => $address->getFamilyName(),
-      'company' => $address->getOrganization(),
-      'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
-      'country' => $address->getCountryCode(),
-      'city' => $address->getLocality(),
-      'state' => $address->getAdministrativeArea(),
-      'zip' => $address->getPostalCode(),
-      // @todo support adding phone and fax
-    ]);
-    $transaction_request->addDataType(new BillTo($bill_to));
+    // Add billing information when available, to satisfy AVS.
+    if ($billing_profile = $payment_method->getBillingProfile()) {
+      /** @var \Drupal\address\AddressInterface $address */
+      $address = $billing_profile->get('address')->first();
+      $bill_to = array_filter([
+        // @todo how to allow customizing this.
+        'firstName' => $address->getGivenName(),
+        'lastName' => $address->getFamilyName(),
+        'company' => $address->getOrganization(),
+        'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
+        'country' => $address->getCountryCode(),
+        'city' => $address->getLocality(),
+        'state' => $address->getAdministrativeArea(),
+        'zip' => $address->getPostalCode(),
+        // @todo support adding phone and fax
+      ]);
+      $transaction_request->addDataType(new BillTo($bill_to));
+    }
 
     // Adding order information to the transaction.
     $order = $payment->getOrder();
@@ -547,19 +550,21 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
       'customerType' => 'individual',
     ]);
     $payment_profile->addCustomerPaymentProfileId($payment_method->getRemoteId());
-    /** @var \Drupal\address\AddressInterface $address */
-    $address = $payment_method->getBillingProfile()->address->first();
-    $bill_to = array_filter([
-      'firstName' => $address->getGivenName(),
-      'lastName' => $address->getFamilyName(),
-      'company' => $address->getOrganization(),
-      'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
-      'country' => $address->getCountryCode(),
-      'city' => $address->getLocality(),
-      'state' => $address->getAdministrativeArea(),
-      'zip' => $address->getPostalCode(),
-    ]);
-    $payment_profile->addBillTo(new BillTo($bill_to));
+    if ($billing_profile = $payment_method->getBillingProfile()) {
+      /** @var \Drupal\address\AddressInterface $address */
+      $address = $billing_profile->get('address')->first();
+      $bill_to = array_filter([
+        'firstName' => $address->getGivenName(),
+        'lastName' => $address->getFamilyName(),
+        'company' => $address->getOrganization(),
+        'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
+        'country' => $address->getCountryCode(),
+        'city' => $address->getLocality(),
+        'state' => $address->getAdministrativeArea(),
+        'zip' => $address->getPostalCode(),
+      ]);
+      $payment_profile->addBillTo(new BillTo($bill_to));
+    }
     $request->setPaymentProfile($payment_profile);
     $payment_profile->addPayment(new AuthnetCreditCard([
       'cardNumber' => 'XXXX' . $payment_method->get('card_number')->value,
@@ -740,21 +745,6 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
    *   The payment profile data type.
    */
   protected function buildCustomerPaymentProfile(PaymentMethodInterface $payment_method, array $payment_details, $customer_id = NULL) {
-    /** @var \Drupal\address\AddressInterface $address */
-    $address = $payment_method->getBillingProfile()->address->first();
-    $bill_to = array_filter([
-      // @todo how to allow customizing this.
-      'firstName' => $address->getGivenName(),
-      'lastName' => $address->getFamilyName(),
-      'company' => $address->getOrganization(),
-      'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
-      'country' => $address->getCountryCode(),
-      'city' => $address->getLocality(),
-      'state' => $address->getAdministrativeArea(),
-      'zip' => $address->getPostalCode(),
-      // @todo support adding phone and fax
-    ]);
-
     $payment = new OpaqueData([
       'dataDescriptor' => $payment_details['data_descriptor'],
       'dataValue' => $payment_details['data_value'],
@@ -764,7 +754,24 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
       // @todo how to allow customizing this.
       'customerType' => 'individual',
     ]);
-    $payment_profile->addBillTo(new BillTo($bill_to));
+
+    if ($billing_profile = $payment_method->getBillingProfile()) {
+      /** @var \Drupal\address\AddressInterface $address */
+      $address = $billing_profile->get('address')->first();
+      $bill_to = array_filter([
+        // @todo how to allow customizing this.
+        'firstName' => $address->getGivenName(),
+        'lastName' => $address->getFamilyName(),
+        'company' => $address->getOrganization(),
+        'address' => substr($address->getAddressLine1() . ' ' . $address->getAddressLine2(), 0, 60),
+        'country' => $address->getCountryCode(),
+        'city' => $address->getLocality(),
+        'state' => $address->getAdministrativeArea(),
+        'zip' => $address->getPostalCode(),
+        // @todo support adding phone and fax
+      ]);
+      $payment_profile->addBillTo(new BillTo($bill_to));
+    }
     $payment_profile->addPayment($payment);
 
     return $payment_profile;
