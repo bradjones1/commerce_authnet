@@ -43,9 +43,8 @@ class ConfigurationFormTest extends CommerceWebDriverTestBase {
     $this->assertSession()->assertWaitOnAjaxRequest();
     // Populate the label / machine name first.
     $this->getSession()->getPage()->fillField('label', 'Authorize.net AcceptJS');
-    $this->assertJsCondition('jQuery("#edit-label-machine-name-suffix .machine-name-value").html() !== ""');
+    $this->assertJsCondition('jQuery(".machine-name-value:visible").length > 0');
     $values = [
-      'plugin' => 'authorizenet_acceptjs',
       'configuration[authorizenet_acceptjs][api_login]' => '64EZ77a2w8',
       'configuration[authorizenet_acceptjs][transaction_key]' => '2rrbVvBR6949En2d',
       'configuration[authorizenet_acceptjs][client_key]' => '2fejMFQEzA2cg6C5wV3Kz398S94XkPbS56RU2Zq2tfjcmDhDVp8h8XmZ49JQLbY6',
@@ -74,15 +73,13 @@ class ConfigurationFormTest extends CommerceWebDriverTestBase {
     $this->drupalGet('admin/commerce/config/payment-gateways');
     $this->getSession()->getPage()->clickLink('Add payment gateway');
     $this->assertSession()->addressEquals('admin/commerce/config/payment-gateways/add');
-    $this->saveHtmlOutput();
     $radio_button = $this->getSession()->getPage()->findField('Authorize.net (Echeck)');
     $radio_button->click();
     $this->waitForAjaxToFinish();
     // Populate the label / machine name first.
     $this->getSession()->getPage()->fillField('label', 'Authorize.net Echeck');
-    $this->assertJsCondition('jQuery("#edit-label-machine-name-suffix .machine-name-value").html() !== ""');
+    $this->assertJsCondition('jQuery(".machine-name-value:visible").length > 0');
     $values = [
-      'plugin' => 'authorizenet_echeck',
       'configuration[authorizenet_echeck][api_login]' => '64EZ77a2w8',
       'configuration[authorizenet_echeck][transaction_key]' => '2rrbVvBR6949En2d',
       'configuration[authorizenet_echeck][client_key]' => '2fejMFQEzA2cg6C5wV3Kz398S94XkPbS56RU2Zq2tfjcmDhDVp8h8XmZ49JQLbY6',
@@ -111,15 +108,13 @@ class ConfigurationFormTest extends CommerceWebDriverTestBase {
     $this->drupalGet('admin/commerce/config/payment-gateways');
     $this->getSession()->getPage()->clickLink('Add payment gateway');
     $this->assertSession()->addressEquals('admin/commerce/config/payment-gateways/add');
-    $this->saveHtmlOutput();
     $radio_button = $this->getSession()->getPage()->findField('Authorize.net (Visa Checkout)');
     $radio_button->click();
     $this->waitForAjaxToFinish();
     // Populate the label / machine name first.
     $this->getSession()->getPage()->fillField('label', 'Authorize.net Visa Checkout');
-    $this->assertJsCondition('jQuery("#edit-label-machine-name-suffix .machine-name-value").html() !== ""');
+    $this->assertJsCondition('jQuery(".machine-name-value:visible").length > 0');
     $values = [
-      'plugin' => 'authorizenet_visa_checkout',
       'configuration[authorizenet_visa_checkout][api_login]' => '64EZ77a2w8',
       'configuration[authorizenet_visa_checkout][transaction_key]' => '2rrbVvBR6949En2d',
       'configuration[authorizenet_visa_checkout][client_key]' => '2fejMFQEzA2cg6C5wV3Kz398S94XkPbS56RU2Zq2tfjcmDhDVp8h8XmZ49JQLbY6',
