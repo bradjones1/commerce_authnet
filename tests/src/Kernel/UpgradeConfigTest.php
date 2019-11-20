@@ -14,6 +14,7 @@ use Drupal\KernelTests\KernelTestBase;
 class UpgradeConfigTest extends KernelTestBase {
 
   protected static $modules = [
+    'profile',
     'commerce',
     'commerce_price',
     'commerce_payment',
