@@ -12,6 +12,7 @@ use Drupal\commerce_price\Price;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 use GuzzleHttp\ClientInterface;
 use CommerceGuys\AuthNet\CreateTransactionRequest;
 use CommerceGuys\AuthNet\DataTypes\OpaqueData;
@@ -66,9 +67,16 @@ class VisaCheckout extends OffsitePaymentGatewayBase {
   protected $logger;
 
   /**
+   * The messenger sevice.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time, ClientInterface $client, LoggerInterface $logger) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time, ClientInterface $client, LoggerInterface $logger, MessengerInterface $messenger) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager, $time);
 
     $this->httpClient = $client;
@@ -79,6 +87,7 @@ class VisaCheckout extends OffsitePaymentGatewayBase {
       'transaction_key' => $this->configuration['transaction_key'],
       'client_key' => $this->configuration['client_key'],
     ]);
+    $this->messenger = $messenger;
   }
 
   /**
@@ -94,7 +103,8 @@ class VisaCheckout extends OffsitePaymentGatewayBase {
       $container->get('plugin.manager.commerce_payment_method_type'),
       $container->get('datetime.time'),
       $container->get('http_client'),
-      $container->get('commerce_authnet.logger')
+      $container->get('commerce_authnet.logger'),
+      $container->get('messenger')
     );
   }
 
@@ -170,7 +180,7 @@ class VisaCheckout extends OffsitePaymentGatewayBase {
 
       if ($response->getResultCode() != 'Ok') {
         $this->logResponse($response);
-        drupal_set_message($this->describeResponse($response), 'error');
+        $this->messenger->addError($this->describeResponse($response));
       }
     }
   }

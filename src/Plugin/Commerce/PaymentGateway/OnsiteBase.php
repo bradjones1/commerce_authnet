@@ -17,6 +17,7 @@ use Drupal\commerce_price\Price;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Url;
 use GuzzleHttp\ClientInterface;
 use CommerceGuys\AuthNet\Configuration;
@@ -75,9 +76,16 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
   protected $privateTempStore;
 
   /**
+   * The messenger service.
+   *
+   * @var \Drupal\Core\Messenger\MessengerInterface
+   */
+  protected $messenger;
+
+  /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time, ClientInterface $client, LoggerInterface $logger, PrivateTempStoreFactory $private_tempstore, AdjustmentTransformerInterface $adjustment_transformer) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, TimeInterface $time, ClientInterface $client, LoggerInterface $logger, PrivateTempStoreFactory $private_tempstore, AdjustmentTransformerInterface $adjustment_transformer, MessengerInterface $messenger) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager, $time);
 
     $this->httpClient = $client;
@@ -90,6 +98,7 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
     ]);
     $this->privateTempStore = $private_tempstore;
     $this->adjustmentTransformer = $adjustment_transformer;
+    $this->messenger = $messenger;
   }
 
   /**
@@ -107,7 +116,8 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
       $container->get('http_client'),
       $container->get('commerce_authnet.logger'),
       $container->get('tempstore.private'),
-      $container->get('commerce_order.adjustment_transformer')
+      $container->get('commerce_order.adjustment_transformer'),
+      $container->get('messenger')
     );
   }
 
@@ -185,7 +195,7 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
 
       if ($response->getResultCode() != 'Ok') {
         $this->logResponse($response);
-        drupal_set_message($this->describeResponse($response), 'error');
+        $this->messenger->addError($this->describeResponse($response));
       }
     }
   }

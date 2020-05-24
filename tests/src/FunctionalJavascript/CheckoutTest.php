@@ -5,6 +5,7 @@ namespace Drupal\Tests\commerce_authnet\FunctionalJavascript;
 use Drupal\commerce_payment\Entity\PaymentGateway;
 use Drupal\commerce_store\StoreCreationTrait;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
+use Drupal\Core\Url;
 use Drupal\Tests\commerce\FunctionalJavascript\CommerceWebDriverTestBase;
 
 /**
@@ -98,8 +99,7 @@ class CheckoutTest extends CommerceWebDriverTestBase {
     $this->drupalLogout();
     $this->drupalGet($this->product->toUrl()->toString());
     $this->submitForm([], 'Add to cart');
-    $cart_link = $this->getSession()->getPage()->findLink('your cart');
-    $cart_link->click();
+    $this->drupalGet(Url::fromRoute('commerce_cart.page'));
     $this->submitForm([], 'Checkout');
     $this->assertSession()->pageTextNotContains('Order Summary');
     $this->submitForm([], 'Continue as Guest');
