@@ -4,13 +4,8 @@
     "description": "Provides Commerce integration for Authorize.net.",
     "homepage": "http://drupal.org/project/commerce_authnet",
     "license": "GPL-2.0+",
-    "repositories": {
-        "authnet": {
-            "type": "vcs",
-            "url": "https://github.com/commerceguys/authnet"
-        }
-    },
     "require": {
+        "drupal/core": "^8.8 || ^9",
         "drupal/commerce": "^2.14",
         "commerceguys/authnet": "^1.1.2",
         "lcobucci/jwt": "~3.1"
