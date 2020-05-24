@@ -11,7 +11,7 @@ use Drupal\commerce_payment\Entity\PaymentGateway;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\DependencyInjection\ServiceModifierInterface;
 use Drupal\profile\Entity\Profile;
-use Drupal\Tests\commerce\Kernel\CommerceKernelTestBase;
+use Drupal\Tests\commerce_order\Kernel\OrderKernelTestBase;
 use Drupal\user\Entity\User;
 
 /**
@@ -19,7 +19,7 @@ use Drupal\user\Entity\User;
  *
  * @group commerce_authnet
  */
-class AcceptJsPaymentMethodTest extends CommerceKernelTestBase implements ServiceModifierInterface {
+class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceModifierInterface {
 
   /**
    * The payment gateway.
@@ -32,11 +32,6 @@ class AcceptJsPaymentMethodTest extends CommerceKernelTestBase implements Servic
    * {@inheritdoc}
    */
   public static $modules = [
-    'address',
-    'entity_reference_revisions',
-    'profile',
-    'state_machine',
-    'commerce_order',
     'commerce_payment',
     'commerce_authnet',
   ];
@@ -46,10 +41,8 @@ class AcceptJsPaymentMethodTest extends CommerceKernelTestBase implements Servic
    */
   protected function setUp() {
     parent::setUp();
-    $this->installEntitySchema('profile');
     $this->installEntitySchema('commerce_payment');
     $this->installEntitySchema('commerce_payment_method');
-    $this->installConfig('commerce_order');
     $this->installConfig('commerce_payment');
 
     /** @var \Drupal\commerce_payment\Entity\PaymentGateway $gateway */
