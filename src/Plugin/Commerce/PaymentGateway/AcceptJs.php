@@ -46,7 +46,7 @@ use Lcobucci\JWT\Signer\Hmac\Sha256;
  *   payment_type = "acceptjs",
  *   payment_method_types = {"credit_card"},
  *   credit_card_types = {
- *     "amex", "dinersclub", "discover", "jcb", "mastercard", "visa"
+ *     "amex", "dinersclub", "discover", "jcb", "mastercard", "visa", "unionpay"
  *   },
  *   requires_billing_information = FALSE,
  * )
@@ -794,6 +794,7 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
       'JCB' => 'jcb',
       'MasterCard' => 'mastercard',
       'Visa' => 'visa',
+      'China UnionPay' => 'unionpay',
     ];
     if (!isset($map[$card_type])) {
       throw new HardDeclineException(sprintf('Unsupported credit card type "%s".', $card_type));
