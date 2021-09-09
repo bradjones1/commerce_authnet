@@ -3,7 +3,6 @@
 namespace Drupal\Tests\commerce_authnet\Kernel;
 
 use Drupal\commerce_payment\Entity\PaymentGateway;
-use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\KernelTests\KernelTestBase;
 
 /**
@@ -13,6 +12,9 @@ use Drupal\KernelTests\KernelTestBase;
  */
 class UpgradeConfigTest extends KernelTestBase {
 
+  /**
+   * {@inheritdoc}
+   */
   protected static $modules = [
     'profile',
     'commerce',
@@ -59,6 +61,9 @@ class UpgradeConfigTest extends KernelTestBase {
     ], $gateway_configuration);
   }
 
+  /**
+   * Tests the client key message.
+   */
   public function testClientKeyMessage() {
     $this->installFixture(__DIR__ . '/../../fixtures/authorizenet-pre-acceptjs.php.gz');
     $results = [];

@@ -39,7 +39,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
   /**
    * {@inheritdoc}
    */
-  protected function setUp() {
+  protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('commerce_payment');
     $this->installEntitySchema('commerce_payment_method');
@@ -73,6 +73,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
    * Creates an API configuration.
    *
    * @return \CommerceGuys\AuthNet\Configuration
+   *   The API configuration.
    */
   protected function createApiConfiguration() {
     $configuration = $this->gateway->getPlugin()->getConfiguration();
@@ -147,7 +148,6 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
     ]);
     $profile->save();
 
-
     /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AcceptJs $plugin */
     $plugin = $this->gateway->getPlugin();
     $opaque_data = $this->createDataDescriptor();
@@ -195,7 +195,6 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
       'uid' => $user,
     ]);
     $profile->save();
-
 
     /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AcceptJs $plugin */
     $plugin = $this->gateway->getPlugin();
@@ -245,7 +244,6 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
       'uid' => $user,
     ]);
     $profile->save();
-
 
     /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AcceptJs $plugin */
     $plugin = $this->gateway->getPlugin();
@@ -303,7 +301,6 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
     ]);
     $profile->save();
 
-
     /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AcceptJs $plugin */
     $plugin = $this->gateway->getPlugin();
     $opaque_data = $this->createDataDescriptor();
@@ -351,7 +348,6 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
       'uid' => $user->id(),
     ]);
     $profile->save();
-
 
     /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AcceptJs $plugin */
     $plugin = $this->gateway->getPlugin();

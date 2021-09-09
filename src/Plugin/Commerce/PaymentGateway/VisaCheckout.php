@@ -204,7 +204,7 @@ class VisaCheckout extends OffsitePaymentGatewayBase {
    * {@inheritdoc}
    */
   public function onReturn(OrderInterface $order, Request $request) {
-    if ($request->request->has('error'))  {
+    if ($request->request->has('error')) {
       $error = $request->request->get('error');
       return;
     }

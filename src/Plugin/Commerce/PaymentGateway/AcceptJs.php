@@ -86,7 +86,7 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
           ],
         ],
       ],
-      '#description' => $this->t('In test mode the credentials provided here are not used (but the fields are still required).')
+      '#description' => $this->t('In test mode the credentials provided here are not used (but the fields are still required).'),
     ];
 
     $form['cca']['cca_api_id'] = [
@@ -150,6 +150,7 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
    * Get the CCA API Identifier.
    *
    * @return string
+   *   The CCA API Identifier.
    */
   public function getCcaApiId() {
     if ($this->configuration['cca_status']) {
@@ -168,6 +169,7 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
    * Get the CCA API Identifier.
    *
    * @return string
+   *   The CCA API Identifier.
    */
   public function getCcaOrgUnitId() {
     if ($this->configuration['cca_status']) {
@@ -186,6 +188,7 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
    * Get the CCA API Key.
    *
    * @return string
+   *   The CCA API Key.
    */
   public function getCcaApiKey() {
     if ($this->configuration['cca_status']) {

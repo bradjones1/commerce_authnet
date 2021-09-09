@@ -47,7 +47,7 @@ class ManagePaymentMethodsTest extends CommerceBrowserTestBase {
   /**
    * {@inheritdoc}
    */
-  protected function setUp() {
+  protected function setUp(): void {
     $this->markTestIncomplete();
     parent::setUp();
 

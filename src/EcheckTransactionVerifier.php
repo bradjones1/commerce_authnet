@@ -7,7 +7,6 @@ use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Psr\Log\LoggerInterface;
 use Drupal\Component\Datetime\TimeInterface;
-use Drupal\commerce_payment\Entity\PaymentGateway;
 
 /**
  * Verify echeck transaction states.
@@ -39,9 +38,11 @@ class EcheckTransactionVerifier implements PaymentProcessorInterface {
    * Constructs a new EcheckTransactionVerifier object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   *   The entity type manager
+   *   The entity type manager.
    * @param \Psr\Log\LoggerInterface $logger
    *   The logger.
+   * @param \Drupal\Component\Datetime\TimeInterface $time
+   *   The time service.
    */
   public function __construct(EntityTypeManagerInterface $entity_type_manager, LoggerInterface $logger, TimeInterface $time) {
     $this->entityTypeManager = $entity_type_manager;

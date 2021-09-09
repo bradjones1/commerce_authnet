@@ -18,14 +18,17 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 class CcaValidation implements ContainerInjectionInterface {
 
   /**
+   * The request stack.
+   *
    * @var \Symfony\Component\HttpFoundation\RequestStack
    */
   private $requestStack;
 
   /**
-   * Constructor.
+   * Constructs a new CcaValidation object.
    *
    * @param \Symfony\Component\HttpFoundation\RequestStack $request_stack
+   *   The request stack.
    */
   public function __construct(RequestStack $request_stack) {
     $this->requestStack = $request_stack;

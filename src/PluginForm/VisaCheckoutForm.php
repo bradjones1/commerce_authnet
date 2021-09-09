@@ -36,7 +36,6 @@ class VisaCheckoutForm extends PaymentOffsiteForm {
     $checkout_flow = $order->get('checkout_flow')->entity;
     $next_step = $checkout_flow->getPlugin()->getNextStepId($current_checkout_step);
 
-
     $form['authnet_visa']['#attached']['drupalSettings']['commerceAuthorizeNet'] = [
       'visaApiKey' => $plugin->getConfiguration()['visa_checkout_api_key'],
       'paymentMethodType' => 'authnet_visa',

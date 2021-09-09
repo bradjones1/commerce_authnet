@@ -5,11 +5,7 @@
  * Post update functions for commerce_authnet.
  */
 
-use Drupal\commerce_payment\Entity\PaymentGateway;
 use Drupal\commerce_payment\Entity\PaymentGatewayInterface;
-use Drupal\commerce_payment\Entity\PaymentMethod;
-use Drupal\commerce_payment\Entity\Payment;
-use Drupal\commerce_order\Entity\Order;
 
 /**
  * Separate echeck payment gateways from accept.js and update all affected

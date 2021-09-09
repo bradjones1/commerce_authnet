@@ -37,4 +37,5 @@ class PaymentDeclineForm extends PaymentGatewayFormBase {
     $payment_gateway_plugin = $this->plugin;
     $payment_gateway_plugin->declinePayment($payment);
   }
+
 }

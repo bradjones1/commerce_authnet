@@ -38,10 +38,10 @@ use Drupal\Core\TempStore\PrivateTempStoreFactory;
 /**
  * Provides the Authorize.net payment gateway base class.
  */
-abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePaymentGatewayInterface, SupportsAuthorizationsInterface {
+abstract class OnsiteBase extends OnsitePaymentGatewayBase implements OnsitePaymentGatewayInterface, SupportsAuthorizationsInterface {
 
   /**
-   * The adjustmentTransformer service.
+   * The adjustment transformer.
    *
    * @var \Drupal\commerce_order\AdjustmentTransformerInterface
    */
@@ -163,8 +163,8 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements  OnsitePay
       $url = Url::fromRoute('entity.commerce_checkout_flow.collection');
       $form['transaction_type'] = [
         '#markup' => $this->t('<p>To configure the transaction settings, modify the <em>Payment process</em> pane in your checkout flow. From there you can choose authorization only or authorization and capture. You can manage your checkout flows here: <a href=":url">:url</a></p>', [
-          ':url' => $url->toString()]) .
-          $this->t('<p>For Echeck to work Transaction Details API needs to be enabled in your merchant account ("Account" => "Transaction Details API").</p>'),
+          ':url' => $url->toString(),
+        ]) . $this->t('<p>For Echeck to work Transaction Details API needs to be enabled in your merchant account ("Account" => "Transaction Details API").</p>'),
       ];
     }
     catch (\Exception $e) {

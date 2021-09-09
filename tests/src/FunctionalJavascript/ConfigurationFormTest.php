@@ -4,7 +4,6 @@ namespace Drupal\Tests\commerce_authnet\FunctionalJavascript;
 
 use Drupal\commerce_payment\Entity\PaymentGateway;
 use Drupal\Tests\commerce\FunctionalJavascript\CommerceWebDriverTestBase;
-use WebDriver\Exception\ElementNotVisible;
 
 /**
  * Tests the Authorize.net payment configuration form.
@@ -33,7 +32,7 @@ class ConfigurationFormTest extends CommerceWebDriverTestBase {
   /**
    * Tests creating an Accept.JS payment gateway.
    */
-  public function testCreateAcceptJSGateway() {
+  public function testCreateAcceptJsGateway() {
     $this->drupalGet('admin/commerce/config/payment-gateways');
     $this->getSession()->getPage()->clickLink('Add payment gateway');
     $this->assertSession()->addressEquals('admin/commerce/config/payment-gateways/add');
@@ -69,7 +68,7 @@ class ConfigurationFormTest extends CommerceWebDriverTestBase {
   /**
    * Tests creating an ECheck payment gateway.
    */
-  public function testCreateECheckGateway() {
+  public function testCreateEcheckGateway() {
     $this->drupalGet('admin/commerce/config/payment-gateways');
     $this->getSession()->getPage()->clickLink('Add payment gateway');
     $this->assertSession()->addressEquals('admin/commerce/config/payment-gateways/add');
@@ -136,4 +135,5 @@ class ConfigurationFormTest extends CommerceWebDriverTestBase {
     $this->assertEquals('2rrbVvBR6949En2d', $config['transaction_key']);
     $this->assertEquals('2fejMFQEzA2cg6C5wV3Kz398S94XkPbS56RU2Zq2tfjcmDhDVp8h8XmZ49JQLbY6', $config['client_key']);
   }
+
 }

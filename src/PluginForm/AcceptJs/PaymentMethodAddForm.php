@@ -257,7 +257,7 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     // The payment gateway plugin will process the submitted payment details.
     $values = $form_state->getValues();
     if (!empty($values['contact_information']['email'])) {
-      // then we are dealing with anonymous user. Adding a customer email.
+      // Then we are dealing with anonymous user. Adding a customer email.
       $payment_details = $values['payment_information']['add_payment_method']['payment_details'];
       $payment_details['customer_email'] = $values['contact_information']['email'];
       $form_state->setValue(['payment_information', 'add_payment_method', 'payment_details'], $payment_details);
@@ -268,8 +268,9 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
    * Create JWT token for CCA.
    *
    * @return \Lcobucci\JWT\Token
+   *   The JWT token.
    */
-  protected function generateJwt(){
+  protected function generateJwt() {
     $current_time = time();
     $expire_time = 3600;
     /** @var \Drupal\commerce_order\Entity\Order $order */

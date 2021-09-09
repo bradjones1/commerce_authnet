@@ -1,11 +1,11 @@
 <?php
 
-use Drupal\Core\Form\FormStateInterface;
-
 /**
  * @file
  * Contains hooks for Commerce Authorize.net.
  */
+
+use Drupal\Core\Form\FormStateInterface;
 
 /**
  * Implements hook_form_alter().

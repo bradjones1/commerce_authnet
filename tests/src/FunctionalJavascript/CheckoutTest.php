@@ -3,7 +3,6 @@
 namespace Drupal\Tests\commerce_authnet\FunctionalJavascript;
 
 use Drupal\commerce_payment\Entity\PaymentGateway;
-use Drupal\commerce_store\StoreCreationTrait;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\Url;
 use Drupal\Tests\commerce\FunctionalJavascript\CommerceWebDriverTestBase;
@@ -44,7 +43,7 @@ class CheckoutTest extends CommerceWebDriverTestBase {
   /**
    * {@inheritdoc}
    */
-  protected function setUp() {
+  protected function setUp(): void {
     parent::setUp();
 
     $store = $this->createStore('Demo', 'demo@example.com', 'default', TRUE);
@@ -108,7 +107,7 @@ class CheckoutTest extends CommerceWebDriverTestBase {
       'contact_information[email_confirm]' => 'guest@example.com',
       'payment_information[add_payment_method][payment_details][number]' => '411111111111111',
       'payment_information[add_payment_method][payment_details][expiration][month]' => '02',
-      'payment_information[add_payment_method][payment_details][expiration][year]' => '2020',
+      'payment_information[add_payment_method][payment_details][expiration][year]' => '2027',
       'payment_information[add_payment_method][payment_details][security_code]' => '123',
       'payment_information[add_payment_method][billing_information][address][0][address][given_name]' => 'Johnny',
       'payment_information[add_payment_method][billing_information][address][0][address][family_name]' => 'Appleseed',
@@ -147,7 +146,7 @@ class CheckoutTest extends CommerceWebDriverTestBase {
     $this->submitForm([
       'payment_information[add_payment_method][payment_details][number]' => '4111111111111111',
       'payment_information[add_payment_method][payment_details][expiration][month]' => '02',
-      'payment_information[add_payment_method][payment_details][expiration][year]' => '2020',
+      'payment_information[add_payment_method][payment_details][expiration][year]' => '2027',
       'payment_information[add_payment_method][payment_details][security_code]' => '123',
       'payment_information[add_payment_method][billing_information][address][0][address][given_name]' => 'Johnny',
       'payment_information[add_payment_method][billing_information][address][0][address][family_name]' => 'Appleseed',
