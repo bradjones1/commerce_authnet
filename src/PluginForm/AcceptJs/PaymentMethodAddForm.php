@@ -12,6 +12,7 @@ use Lcobucci\JWT\Builder;
 use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_price\Calculator;
+use Lcobucci\JWT\Signer\Key;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -285,15 +286,14 @@ class PaymentMethodAddForm extends BasePaymentMethodAddForm {
     /** @var \Drupal\commerce_authnet\Plugin\Commerce\PaymentGateway\AcceptJs $plugin */
     $plugin = $this->plugin;
 
-    $token = (new Builder())->setIssuer($plugin->getCcaApiId())
-      ->setId(uniqid(), TRUE)
-      ->setIssuedAt($current_time)
-      ->setExpiration($current_time + $expire_time)
-      ->set('OrgUnitId', $plugin->getCcaOrgUnitId())
-      ->set('Payload', $order_details)
-      ->set('ObjectifyPayload', TRUE)
-      ->sign(new Sha256(), $plugin->getCcaApiKey())
-      ->getToken();
+    $token = (new Builder())->issuedBy($plugin->getCcaApiId())
+      ->identifiedBy(uniqid(), TRUE)
+      ->issuedAt($current_time)
+      ->expiresAt($current_time + $expire_time)
+      ->withClaim('OrgUnitId', $plugin->getCcaOrgUnitId())
+      ->withClaim('Payload', $order_details)
+      ->withClaim('ObjectifyPayload', TRUE)
+      ->getToken(new Sha256(), new Key($plugin->getCcaApiKey()));
 
     return $token;
   }
