@@ -437,8 +437,11 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements OnsitePaym
     $shipments = $order->get('shipments')->referencedEntities();
     if ($shipments) {
       foreach ($shipments as $shipment) {
-        $amount = Calculator::add($amount, $shipment->getAmount()->getNumber());
-        $labels[] = $shipment->label();
+        // Shipments without an amount are incomplete / unrated.
+        if ($shipment_amount = $shipment->getAmount()) {
+          $amount = Calculator::add($amount, $shipment_amount->getNumber());
+          $labels[] = $shipment->label();
+        }
       }
     }
 
