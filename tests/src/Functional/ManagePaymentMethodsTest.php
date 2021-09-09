@@ -25,15 +25,9 @@ class ManagePaymentMethodsTest extends CommerceBrowserTestBase {
   protected $account;
 
   /**
-   * Modules to enable.
-   *
-   * @var array
+   * {@inheritdoc}
    */
-  public static $modules = ['system', 'field', 'user', 'text',
-    'entity', 'views', 'address', 'profile', 'commerce', 'inline_entity_form',
-    'commerce_price', 'commerce_store', 'commerce_product', 'commerce_cart',
-    'commerce_checkout', 'commerce_order', 'views_ui', 'commerce_authnet',
-  ];
+  public static $modules = ['commerce_authnet'];
 
   /**
    * {@inheritdoc}
@@ -50,8 +44,6 @@ class ManagePaymentMethodsTest extends CommerceBrowserTestBase {
   protected function setUp(): void {
     $this->markTestIncomplete();
     parent::setUp();
-
-    $this->createStore('Demo', 'demo@example.com', 'default', TRUE);
 
     /** @var \Drupal\commerce_payment\Entity\PaymentGateway $gateway */
     $gateway = PaymentGateway::create([
@@ -90,7 +82,7 @@ class ManagePaymentMethodsTest extends CommerceBrowserTestBase {
     $this->submitForm([
       'payment_method[payment_details][number]' => '4111111111111111',
       'payment_method[payment_details][expiration][month]' => '2',
-      'payment_method[payment_details][expiration][year]' => '2020',
+      'payment_method[payment_details][expiration][year]' => '2027',
       'payment_method[payment_details][security_code]' => '123',
       'payment_method[billing_information][address][0][address][given_name]' => 'Johnny',
       'payment_method[billing_information][address][0][address][family_name]' => 'Appleseed',

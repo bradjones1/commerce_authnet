@@ -115,7 +115,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
       'id' => $this->randomString(),
       'token' => [
         'cardNumber' => '5424000000000015',
-        'expirationDate' => '122020',
+        'expirationDate' => '122027',
         'cardCode' => '900',
         'fullName' => 'Testy McTesterson',
       ],
@@ -169,7 +169,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
         'data_value' => $opaque_data->dataValue,
         'last4' => '0015',
         'expiration_month' => '12',
-        'expiration_year' => '2020',
+        'expiration_year' => '2027',
       ]
     );
     $this->assertNotEmpty($payment_method->id());
@@ -218,7 +218,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
         'customer_email' => $this->randomString() . '@example.com',
         'last4' => '0015',
         'expiration_month' => '12',
-        'expiration_year' => '2020',
+        'expiration_year' => '2027',
       ]
     );
     $this->assertNotEmpty($payment_method->id());
@@ -267,7 +267,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
         'customer_email' => $this->randomString() . '@example.com',
         'last4' => '0015',
         'expiration_month' => '12',
-        'expiration_year' => '2020',
+        'expiration_year' => '2027',
       ]
     );
     $this->assertNotEmpty($payment_method->id());
@@ -322,7 +322,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
         'data_value' => $opaque_data->dataValue,
         'last4' => '0015',
         'expiration_month' => '12',
-        'expiration_year' => '2020',
+        'expiration_year' => '2027',
       ]
     );
     $this->assertNotEmpty($payment_method->id());
@@ -370,7 +370,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
         'data_value' => $opaque_data->dataValue,
         'last4' => '0015',
         'expiration_month' => '12',
-        'expiration_year' => '2020',
+        'expiration_year' => '2027',
       ]
     );
     $this->assertNotEmpty($payment_method->id());
@@ -378,8 +378,8 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
 
     // Test the update.
     $payment_method->get('card_exp_month')->setValue('02');
-    $payment_method->get('card_exp_year')->setValue('2026');
-    $expires = CreditCard::calculateExpirationTimestamp('02', '2026');
+    $payment_method->get('card_exp_year')->setValue('2028');
+    $expires = CreditCard::calculateExpirationTimestamp('02', '2028');
     $payment_method->setExpiresTime($expires);
 
     $plugin->updatePaymentMethod($payment_method);
@@ -397,7 +397,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
 
     $response = $request->execute();
     $this->assertEquals('XXXX0015', $response->paymentProfile->payment->creditCard->cardNumber);
-    $this->assertEquals('2026-02', $response->paymentProfile->payment->creditCard->expirationDate);
+    $this->assertEquals('2028-02', $response->paymentProfile->payment->creditCard->expirationDate);
 
     // Assert the billing information was not lost.
     $this->assertEquals((object) [

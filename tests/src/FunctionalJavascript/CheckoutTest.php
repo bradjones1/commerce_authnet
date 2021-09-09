@@ -8,7 +8,7 @@ use Drupal\Core\Url;
 use Drupal\Tests\commerce\FunctionalJavascript\CommerceWebDriverTestBase;
 
 /**
- * Tests the Authorize.net payment configurationf orm.
+ * Tests the Authorize.net payment configuration form.
  *
  * @group commerce_authnet
  */
@@ -29,14 +29,10 @@ class CheckoutTest extends CommerceWebDriverTestBase {
   protected $product;
 
   /**
-   * Modules to enable.
-   *
-   * @var array
+   * {@inheritdoc}
    */
-  public static $modules = ['system', 'field', 'user', 'text',
-    'entity', 'views', 'address', 'profile', 'commerce', 'inline_entity_form',
-    'commerce_price', 'commerce_store', 'commerce_product', 'commerce_cart',
-    'commerce_payment', 'commerce_checkout', 'commerce_order', 'views_ui',
+  public static $modules = [
+    'commerce_checkout',
     'commerce_authnet',
   ];
 
@@ -45,8 +41,6 @@ class CheckoutTest extends CommerceWebDriverTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-
-    $store = $this->createStore('Demo', 'demo@example.com', 'default', TRUE);
 
     $variation = $this->createEntity('commerce_product_variation', [
       'type' => 'default',
@@ -62,7 +56,7 @@ class CheckoutTest extends CommerceWebDriverTestBase {
       'type' => 'default',
       'title' => 'My product',
       'variations' => [$variation],
-      'stores' => [$store],
+      'stores' => [$this->store],
     ]);
 
     /** @var \Drupal\commerce_payment\Entity\PaymentGateway $gateway */
@@ -105,9 +99,9 @@ class CheckoutTest extends CommerceWebDriverTestBase {
     $this->submitForm([
       'contact_information[email]' => 'guest@example.com',
       'contact_information[email_confirm]' => 'guest@example.com',
-      'payment_information[add_payment_method][payment_details][number]' => '411111111111111',
+      'payment_information[add_payment_method][payment_details][number]' => '4111111111111111',
       'payment_information[add_payment_method][payment_details][expiration][month]' => '02',
-      'payment_information[add_payment_method][payment_details][expiration][year]' => '2027',
+      'payment_information[add_payment_method][payment_details][expiration][year]' => '27',
       'payment_information[add_payment_method][payment_details][security_code]' => '123',
       'payment_information[add_payment_method][billing_information][address][0][address][given_name]' => 'Johnny',
       'payment_information[add_payment_method][billing_information][address][0][address][family_name]' => 'Appleseed',
@@ -124,7 +118,7 @@ class CheckoutTest extends CommerceWebDriverTestBase {
     // $this->assertSession()->pageTextContains('guest@example.com');
     // $this->assertSession()->pageTextContains('Payment information');
     // $this->assertSession()->pageTextContains('Visa ending in 1111');
-    // $this->assertSession()->pageTextContains('Expires 2/2020');
+    // $this->assertSession()->pageTextContains('Expires 2/2027');
     // $this->assertSession()->pageTextContains('Order Summary');
     // $this->submitForm([], 'Pay and complete purchase');
     // $this->assertSession()->pageTextContains('Your order number is 1. You can view your order on your account page when logged in.');
@@ -146,7 +140,7 @@ class CheckoutTest extends CommerceWebDriverTestBase {
     $this->submitForm([
       'payment_information[add_payment_method][payment_details][number]' => '4111111111111111',
       'payment_information[add_payment_method][payment_details][expiration][month]' => '02',
-      'payment_information[add_payment_method][payment_details][expiration][year]' => '2027',
+      'payment_information[add_payment_method][payment_details][expiration][year]' => '27',
       'payment_information[add_payment_method][payment_details][security_code]' => '123',
       'payment_information[add_payment_method][billing_information][address][0][address][given_name]' => 'Johnny',
       'payment_information[add_payment_method][billing_information][address][0][address][family_name]' => 'Appleseed',
@@ -160,7 +154,7 @@ class CheckoutTest extends CommerceWebDriverTestBase {
     // $this->assertSession()->pageTextContains($this->loggedInUser->getEmail());
     // $this->assertSession()->pageTextContains('Payment information');
     // $this->assertSession()->pageTextContains('Visa ending in 1111');
-    // $this->assertSession()->pageTextContains('Expires 2/2020');
+    // $this->assertSession()->pageTextContains('Expires 2/2027');
     // $this->assertSession()->pageTextContains('Order Summary');
     // $this->submitForm([], 'Pay and complete purchase');
     // $this->assertSession()->pageTextContains('Your order number is 1. You can view your order on your account page when logged in.');
