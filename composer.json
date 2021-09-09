@@ -5,8 +5,7 @@
     "homepage": "http://drupal.org/project/commerce_authnet",
     "license": "GPL-2.0+",
     "require": {
-        "drupal/core": "^8.8 || ^9",
-        "drupal/commerce": "^2.14",
+        "drupal/commerce": "^2.25",
         "commerceguys/authnet": "^1.1.2",
         "lcobucci/jwt": "~3.1"
     }
