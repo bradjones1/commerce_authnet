@@ -275,10 +275,13 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements OnsitePaym
   public function deletePaymentMethod(PaymentMethodInterface $payment_method) {
     $owner = $payment_method->getOwner();
     $customer_id = $this->getRemoteCustomerId($owner);
+    if (empty($customer_id)) {
+      $customer_id = $this->getPaymentMethodCustomerId($payment_method);
+    }
 
     $request = new DeleteCustomerPaymentProfileRequest($this->authnetConfiguration, $this->httpClient);
     $request->setCustomerProfileId($customer_id);
-    $request->setCustomerPaymentProfileId($payment_method->getRemoteId());
+    $request->setCustomerPaymentProfileId($this->getRemoteProfileId($payment_method));
     $response = $request->execute();
 
     if ($response->getResultCode() != 'Ok') {
@@ -303,6 +306,37 @@ abstract class OnsiteBase extends OnsitePaymentGatewayBase implements OnsitePaym
     $message = $this->describeResponse($response);
     $level = $response->getResultCode() === 'Error' ? 'error' : 'info';
     $this->logger->log($level, $message);
+  }
+
+  /**
+   * Returns the customer identifier from a payment method's remote id.
+   *
+   * @param \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
+   *   The payment method.
+   * @return mixed
+   *   The remote customer id or FALSE if it cannot be resolved.
+   */
+  public function getPaymentMethodCustomerId(PaymentMethodInterface $payment_method) {
+    $remote_id = $payment_method->getRemoteId();
+    if (strstr($remote_id, '|')) {
+      $ids = explode('|', $remote_id);
+      return reset($ids);
+    }
+    return FALSE;
+  }
+
+  /**
+   * Returns the payment method remote identifier ensuring customer identifier is removed.
+   *
+   * @param \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
+   *   The payment method.
+   * @return string
+   *   The remote id.
+   */
+  public function getRemoteProfileId(PaymentMethodInterface $payment_method) {
+    $remote_id = $payment_method->getRemoteId();
+    $ids = explode('|', $remote_id);
+    return end($ids);
   }
 
   /**

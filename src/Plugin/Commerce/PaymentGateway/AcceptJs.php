@@ -267,15 +267,10 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
     // @todo update SDK to support data type like this.
     // Initializing the profile to charge and adding it to the transaction.
     $customer_profile_id = $this->getRemoteCustomerId($owner);
-
-    // Anonymous users get the customer profile and payment profile ids from
-    // the payment method remote id.
-    if (!$customer_profile_id) {
-      list($customer_profile_id, $payment_profile_id) = explode('|', $payment_method->getRemoteId());
+    if (empty($customer_profile_id)) {
+      $customer_profile_id = $this->getPaymentMethodCustomerId($payment_method);
     }
-    else {
-      $payment_profile_id = $payment_method->getRemoteId();
-    }
+    $payment_profile_id = $this->getRemoteProfileId($payment_method);
     $profile_to_charge = new Profile(['customerProfileId' => $customer_profile_id]);
     $profile_to_charge->addData('paymentProfile', ['paymentProfileId' => $payment_profile_id]);
     $transaction_request->addData('profile', $profile_to_charge->toArray());
@@ -546,11 +541,15 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
    */
   public function updatePaymentMethod(PaymentMethodInterface $payment_method) {
     $request = new UpdateCustomerPaymentProfileRequest($this->authnetConfiguration, $this->httpClient);
-    $request->setCustomerProfileId($this->getRemoteCustomerId($payment_method->getOwner()));
+    $customer_profile_id = $this->getRemoteCustomerId($payment_method->getOwner());
+    if (empty($customer_profile_id)) {
+      $customer_profile_id = $this->getPaymentMethodCustomerId($payment_method);
+    }
+    $request->setCustomerProfileId($customer_profile_id);
     $payment_profile = new PaymentProfile([
       'customerType' => 'individual',
     ]);
-    $payment_profile->addCustomerPaymentProfileId($payment_method->getRemoteId());
+    $payment_profile->addCustomerPaymentProfileId($this->getRemoteProfileId($payment_method));
     if ($billing_profile = $payment_method->getBillingProfile()) {
       /** @var \Drupal\address\AddressInterface $address */
       $address = $billing_profile->get('address')->first();
@@ -610,6 +609,9 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
     $customer_data = [];
     if ($owner && !$owner->isAnonymous()) {
       $customer_profile_id = $this->getRemoteCustomerId($owner);
+      if (empty($customer_profile_id)) {
+        $customer_profile_id = $this->getPaymentMethodCustomerId($payment_method);
+      }
       $customer_data['email'] = $owner->getEmail();
     }
 

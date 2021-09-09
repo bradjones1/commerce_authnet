@@ -392,7 +392,7 @@ class AcceptJsPaymentMethodTest extends OrderKernelTestBase implements ServiceMo
     $configuration = $this->createApiConfiguration();
     $request = new GetCustomerPaymentProfileRequest($configuration, $this->container->get('http_client'));
     $request->setCustomerProfileId($customer_remote_id);
-    $request->setCustomerPaymentProfileId($payment_method->getRemoteId());
+    $request->setCustomerPaymentProfileId($plugin->getRemoteProfileId($payment_method));
     $request->setUnmaskExpirationDate(TRUE);
 
     $response = $request->execute();
