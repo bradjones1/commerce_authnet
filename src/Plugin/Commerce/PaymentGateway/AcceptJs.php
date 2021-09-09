@@ -279,12 +279,10 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
     $profile_to_charge = new Profile(['customerProfileId' => $customer_profile_id]);
     $profile_to_charge->addData('paymentProfile', ['paymentProfileId' => $payment_profile_id]);
     $transaction_request->addData('profile', $profile_to_charge->toArray());
-    if (\Drupal::moduleHandler()->moduleExists('commerce_shipping') && $order->hasField('shipments') && !($order->get('shipments')->isEmpty())) {
-      /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface[] $shipments */
-      $shipments = $payment->getOrder()->get('shipments')->referencedEntities();
-      $first_shipment = reset($shipments);
+    $profiles = $order->collectProfiles();
+    if (isset($profiles['shipping']) && !$profiles['shipping']->get('address')->isEmpty()) {
       /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $shipping_address */
-      $shipping_address = $first_shipment->getShippingProfile()->address->first();
+      $shipping_address = $profiles['shipping']->get('address')->first();
       $ship_data = [
         // @todo how to allow customizing this.
         'firstName' => $shipping_address->getGivenName(),
@@ -386,7 +384,7 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
       throw new PaymentGatewayException($message->getText());
     }
 
-    $new_state = $payment->getState()->value == 'unauthorized_review' ? 'authorization' : 'completed';
+    $new_state = $payment->getState()->getId() == 'unauthorized_review' ? 'authorization' : 'completed';
     $payment->setState($new_state);
     $payment->save();
   }
@@ -412,7 +410,7 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
       throw new PaymentGatewayException($message->getText());
     }
 
-    $new_state = $payment->getState()->value == 'unauthorized_review' ? 'unauthorized_declined' : 'authorization_declined';
+    $new_state = $payment->getState()->getId() == 'unauthorized_review' ? 'unauthorized_declined' : 'authorization_declined';
     $payment->setState($new_state);
     $payment->save();
   }
@@ -836,7 +834,7 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
    * {@inheritdoc}
    */
   public function buildPaymentOperations(PaymentInterface $payment) {
-    $payment_state = $payment->getState()->value;
+    $payment_state = $payment->getState()->getId();
     $operations = parent::buildPaymentOperations($payment);
     $operations['approve'] = [
       'title' => $this->t('Approve'),

@@ -76,12 +76,10 @@ class Echeck extends OnsiteBase implements EcheckInterface {
       $transaction_request->addDataType(new BillTo(array_filter($bill_to)));
     }
 
-    if (\Drupal::moduleHandler()->moduleExists('commerce_shipping') && $order->hasField('shipments') && !($order->get('shipments')->isEmpty())) {
-      /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface[] $shipments */
-      $shipments = $payment->getOrder()->get('shipments')->referencedEntities();
-      $first_shipment = reset($shipments);
+    $profiles = $order->collectProfiles();
+    if (isset($profiles['shipping']) && !$profiles['shipping']->get('address')->isEmpty()) {
       /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $shipping_address */
-      $shipping_address = $first_shipment->getShippingProfile()->address->first();
+      $shipping_address = $profiles['shipping']->get('address')->first();
       $ship_data = [
         // @todo how to allow customizing this.
         'firstName' => $shipping_address->getGivenName(),
