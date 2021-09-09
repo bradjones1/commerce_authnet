@@ -354,6 +354,7 @@ class AcceptJs extends OnsiteBase implements AcceptJsInterface {
     $payment->setExpiresTime($expires);
     $payment->setState($next_state);
     $payment->setRemoteId($response->transactionResponse->transId);
+    $payment->setAvsResponseCode($response->transactionResponse->avsResultCode);
     // @todo Find out how long an authorization is valid, set its expiration.
     $payment->save();
   }
