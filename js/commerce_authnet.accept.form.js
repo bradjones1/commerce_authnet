@@ -178,17 +178,18 @@
       var $primaryButton = $form.find(':input.button--primary');
       $form.append('<input type="hidden" name="_triggering_element_name" value="' + $primaryButton.attr('name') + '" />');
       $form.append('<input type="hidden" name="_triggering_element_value" value="' + $primaryButton.val() + '" />');
-      $form.get(0).submit({ 'populated': true });
+      $primaryButton.prop('disabled', false);
+      $form.trigger('submit', { 'populated' : true });
     };
 
     // Form submit.
     $form.on('submit.authnet', function (event, options) {
-      // Disable the submit button to prevent repeated clicks.
-      $form.find('.button--primary').prop('disabled', true);
       options = options || {};
       if (options.populated) {
         return;
       }
+      // Disable the submit button to prevent repeated clicks.
+      $form.find(':input.button--primary').prop('disabled', true);
       event.preventDefault();
 
       // Store last4 digit.
